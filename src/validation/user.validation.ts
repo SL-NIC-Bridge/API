@@ -1,5 +1,5 @@
 import Joi from 'joi';
-import { Role } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 
 // Create user validation schema
 export const createUserSchema = Joi.object({
@@ -15,7 +15,7 @@ export const createUserSchema = Joi.object({
     'string.min': 'Password must be at least 8 characters long',
     'any.required': 'Password is required',
   }),
-  role: Joi.string().valid(...Object.values(Role)).optional().messages({
+  role: Joi.string().valid(...Object.values(UserRole)).optional().messages({
     'any.only': 'Role must be either USER or ADMIN',
   }),
 });
@@ -29,7 +29,7 @@ export const updateUserSchema = Joi.object({
     'string.min': 'Name must be at least 2 characters long',
     'string.max': 'Name must not exceed 100 characters',
   }),
-  role: Joi.string().valid(...Object.values(Role)).optional().messages({
+  role: Joi.string().valid(...Object.values(UserRole)).optional().messages({
     'any.only': 'Role must be either USER or ADMIN',
   }),
 });

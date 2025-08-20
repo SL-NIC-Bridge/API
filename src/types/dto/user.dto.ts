@@ -1,11 +1,12 @@
-import { Role } from '@prisma/client';
+import { UserRole } from "@prisma/client";
 
 // Base user interface
 export interface IUser {
   id: string;
   email: string;
-  name?: string | null;
-  role: Role;
+  firstName: string;
+  lastName: string;
+  role: UserRole;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -13,24 +14,26 @@ export interface IUser {
 // Create user request DTO
 export interface CreateUserDto {
   email: string;
-  name?: string | null;
+  firstName: string;
+  lastName: string;
   password: string;
-  role?: Role;
+  role: UserRole;
 }
 
 // Update user request DTO
 export interface UpdateUserDto {
   email?: string;
-  name?: string | null;
-  role?: Role;
+  firstName?: string;
+  lastName?: string;
 }
 
 // User response DTO (excludes password)
 export interface UserResponseDto {
   id: string;
   email: string;
-  name?: string | null;
-  role: Role;
+  firstName: string;
+  lastName: string;
+  role: UserRole;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -45,4 +48,4 @@ export type UserListResponseDto = {
 export type SingleUserResponseDto = {
   success: true;
   data: UserResponseDto;
-}; 
+};

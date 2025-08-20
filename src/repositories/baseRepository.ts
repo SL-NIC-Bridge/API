@@ -1,12 +1,12 @@
-import { PrismaClient } from '@prisma/client';
-import { prisma } from '../config/database';
+import { db } from '../config/database';
 import logger from '../config/logger';
+import { ExtendedPrismaClient } from '../config/database';
 
 export abstract class BaseRepository {
-  protected prisma: PrismaClient;
+  protected db: ExtendedPrismaClient;
 
   constructor() {
-    this.prisma = prisma;
+    this.db = db;
   }
 
   /**

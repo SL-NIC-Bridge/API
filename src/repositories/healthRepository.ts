@@ -1,4 +1,5 @@
 import { BaseRepository } from './baseRepository';
+import {UserRole} from '@prisma/client'
 
 export class HealthRepository extends BaseRepository {
   /**
@@ -6,7 +7,7 @@ export class HealthRepository extends BaseRepository {
    */
   async checkDatabaseConnection(): Promise<boolean> {
     try {
-      await this.prisma.$queryRaw`SELECT 1`;
+      await this.db.$queryRaw`SELECT 1`;
       return true;
     } catch (error) {
       this.handleDatabaseError(error, 'checkDatabaseConnection', 'database');
@@ -18,24 +19,21 @@ export class HealthRepository extends BaseRepository {
    */
   async getDatabaseStats(): Promise<{
     totalUsers: number;
-    totalPosts: number;
-    adminUsers: number;
-    regularUsers: number;
+    gnUsers: number;
+    standardUsers: number;
   }> {
     return this.executeQuery(
       async () => {
-        const [totalUsers, totalPosts, adminUsers, regularUsers] = await Promise.all([
-          this.prisma.user.count(),
-          this.prisma.post.count(),
-          this.prisma.user.count({ where: { role: 'ADMIN' } }),
-          this.prisma.user.count({ where: { role: 'USER' } }),
+        const [totalUsers, gnUsers, standardUsers] = await Promise.all([
+          this.db.user.count(),
+          this.db.user.count({ where: { role: UserRole.GN } }),
+          this.db.user.count({ where: { role: UserRole.STANDARD } }),
         ]);
 
         return {
           totalUsers,
-          totalPosts,
-          adminUsers,
-          regularUsers,
+          gnUsers,
+          standardUsers,
         };
       },
       'getDatabaseStats',

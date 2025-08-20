@@ -1,45 +1,40 @@
-import { Role } from '@prisma/client';
 import { BaseRepository } from './baseRepository';
 import { CreateUserDto, UpdateUserDto } from '../types/dto';
+import { UserAccountStatusEnum, UserRole } from '@prisma/client';
 
 export interface UserSelect {
   id: boolean;
   email: boolean;
-  name: boolean;
+  firstName: boolean;
+  lastName: boolean;
   role: boolean;
   createdAt: boolean;
   updatedAt: boolean;
+  currentStatus: boolean;
 }
 
 // User without password for safe return types
 export interface UserWithoutPassword {
   id: string;
   email: string;
-  name: string | null;
-  role: Role;
+  firstName: string;
+  lastName: string;
+  role: UserRole;
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface UserWithPosts extends UserWithoutPassword {
-  posts: Array<{
-    id: string;
-    title: string;
-    content: string | null;
-    published: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }>;
+  currentStatus: UserAccountStatusEnum;
 }
 
 export class UserRepository extends BaseRepository {
   private readonly defaultSelect: UserSelect = {
     id: true,
     email: true,
-    name: true,
+    firstName: true,
+    lastName: true,
     role: true,
     createdAt: true,
     updatedAt: true,
+    currentStatus: true,
   };
 
   /**
@@ -47,7 +42,7 @@ export class UserRepository extends BaseRepository {
    */
   async findAll(select?: Partial<UserSelect>): Promise<UserWithoutPassword[]> {
     return this.executeQuery(
-      () => this.prisma.user.findMany({
+      () => this.db.user.findMany({
         select: { ...this.defaultSelect, ...select },
         orderBy: { createdAt: 'desc' },
       }),
@@ -61,7 +56,7 @@ export class UserRepository extends BaseRepository {
    */
   async findById(id: string, select?: Partial<UserSelect>): Promise<UserWithoutPassword | null> {
     return this.executeQuery(
-      () => this.prisma.user.findUnique({
+      () => this.db.user.findUnique({
         where: { id },
         select: { ...this.defaultSelect, ...select },
       }),
@@ -75,7 +70,7 @@ export class UserRepository extends BaseRepository {
    */
   async findByEmail(email: string, select?: Partial<UserSelect>): Promise<UserWithoutPassword | null> {
     return this.executeQuery(
-      () => this.prisma.user.findUnique({
+      () => this.db.user.findUnique({
         where: { email },
         select: { ...this.defaultSelect, ...select },
       }),
@@ -85,42 +80,18 @@ export class UserRepository extends BaseRepository {
   }
 
   /**
-   * Find user by ID with posts
-   */
-  async findByIdWithPosts(id: string): Promise<UserWithPosts | null> {
-    return this.executeQuery(
-      () => this.prisma.user.findUnique({
-        where: { id },
-        include: {
-          posts: {
-            select: {
-              id: true,
-              title: true,
-              content: true,
-              published: true,
-              createdAt: true,
-              updatedAt: true,
-            },
-            orderBy: { createdAt: 'desc' },
-          },
-        },
-      }),
-      'findByIdWithPosts',
-      'user'
-    );
-  }
-
-  /**
    * Create a new user
    */
   async create(userData: CreateUserDto): Promise<UserWithoutPassword> {
     return this.executeQuery(
-      () => this.prisma.user.create({
+      () => this.db.user.create({
         data: {
           email: userData.email,
-          name: userData.name || null,
-          password: userData.password, // Note: In production, hash the password
-          role: userData.role || 'USER',
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          passwordHash: userData.password, // Note: In production, hash the password
+          role: userData.role || UserRole.STANDARD,
+          currentStatus: UserAccountStatusEnum.ACTIVE
         },
         select: this.defaultSelect,
       }),
@@ -135,12 +106,12 @@ export class UserRepository extends BaseRepository {
   async updateById(id: string, updateData: UpdateUserDto): Promise<UserWithoutPassword> {
     const updateDataFiltered = {
       ...(updateData.email && { email: updateData.email }),
-      ...(updateData.name !== undefined && { name: updateData.name }),
-      ...(updateData.role && { role: updateData.role }),
+      ...(updateData.firstName !== undefined && { firstName: updateData.firstName }),
+      ...(updateData.lastName !== undefined && { lastName: updateData.lastName }),
     };
 
     return this.executeQuery(
-      () => this.prisma.user.update({
+      () => this.db.user.update({
         where: { id },
         data: updateDataFiltered,
         select: this.defaultSelect,
@@ -155,7 +126,7 @@ export class UserRepository extends BaseRepository {
    */
   async deleteById(id: string): Promise<UserWithoutPassword> {
     return this.executeQuery(
-      () => this.prisma.user.delete({
+      () => this.db.user.delete({
         where: { id },
         select: this.defaultSelect,
       }),
@@ -169,7 +140,7 @@ export class UserRepository extends BaseRepository {
    */
   async existsByEmail(email: string): Promise<boolean> {
     return this.exists(
-      () => this.prisma.user.findUnique({ where: { email } }),
+      () => this.db.user.findUnique({ where: { email } }),
       'existsByEmail',
       'user'
     );
@@ -180,7 +151,7 @@ export class UserRepository extends BaseRepository {
    */
   async existsById(id: string): Promise<boolean> {
     return this.exists(
-      () => this.prisma.user.findUnique({ where: { id } }),
+      () => this.db.user.findUnique({ where: { id } }),
       'existsById',
       'user'
     );
@@ -189,9 +160,9 @@ export class UserRepository extends BaseRepository {
   /**
    * Find users by role
    */
-  async findByRole(role: Role, select?: Partial<UserSelect>): Promise<UserWithoutPassword[]> {
+  async findByRole(role: UserRole, select?: Partial<UserSelect>): Promise<UserWithoutPassword[]> {
     return this.executeQuery(
-      () => this.prisma.user.findMany({
+      () => this.db.user.findMany({
         where: { role },
         select: { ...this.defaultSelect, ...select },
         orderBy: { createdAt: 'desc' },
@@ -206,7 +177,7 @@ export class UserRepository extends BaseRepository {
    */
   async count(): Promise<number> {
     return this.executeQuery(
-      () => this.prisma.user.count(),
+      () => this.db.user.count(),
       'count',
       'users'
     );
@@ -215,9 +186,9 @@ export class UserRepository extends BaseRepository {
   /**
    * Count users by role
    */
-  async countByRole(role: Role): Promise<number> {
+  async countByRole(role: UserRole): Promise<number> {
     return this.executeQuery(
-      () => this.prisma.user.count({ where: { role } }),
+      () => this.db.user.count({ where: { role } }),
       'countByRole',
       'users'
     );

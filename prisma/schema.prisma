@@ -1,0 +1,164 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STANDARD
+  GN
+  DS
+}
+
+enum UserCurrentStatus {
+  ACTIVE
+  PENDING_APPROVAL
+  REJECTED
+  DEACTIVATED
+}
+
+enum UserAccountStatusEnum {
+  ACTIVE
+  PENDING_APPROVAL
+  REJECTED
+  DEACTIVATED
+}
+
+enum ApplicationType {
+  NEW
+  RENEWAL
+  REPLACEMENT_LOST
+  REPLACEMENT_DAMAGED
+}
+
+enum ApplicationCurrentStatus {
+  SUBMITTED
+  REJECTED_BY_GN
+  APPROVED_BY_GN
+  ON_HOLD_BY_DS
+  SENT_TO_DRP
+}
+
+enum ApplicationStatusEnum {
+  SUBMITTED
+  REJECTED_BY_GN
+  APPROVED_BY_GN
+  ON_HOLD_BY_DS
+  SENT_TO_DRP
+}
+
+enum AttachmentType {
+  SIGNATURE_ON_APPLICATION
+  BIRTH_CERT
+  ADDRESS_PROOF
+  CURRENT_NIC_COPY
+  POLICE_REPORT
+  AFFIDAVIT
+  DAMAGED_NIC_PHOTO
+  NAME_CHANGE_DOC
+  REGISTERED_SIGNATURE
+  OTHER
+}
+
+model User {
+  id             String            @id @default(cuid())
+  firstName      String
+  lastName       String
+  email          String            @unique
+  passwordHash   String            @map("password_hash")
+  currentStatus  UserCurrentStatus @map("current_status")
+  role           UserRole
+  divisionId     String?           @map("division_id")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  division            Division?            @relation(fields: [divisionId], references: [id])
+  applications        Application[]
+  attachments         Attachment[]         @relation("UploadedBy")
+  applicationStatuses ApplicationStatus[]  @relation("ActorUser")
+  accountStatuses     UserAccountStatus[]  @relation("UserStatus")
+  changedStatuses     UserAccountStatus[]  @relation("ChangedBy")
+
+  @@map("users")
+}
+
+model UserAccountStatus {
+  id              String                   @id @default(cuid())
+  userId          String                   @map("user_id")
+  status          UserAccountStatusEnum
+  changedByUserId String                   @map("changed_by_user_id")
+  comment         String?
+  createdAt       DateTime                 @default(now()) @map("created_at")
+
+  // Relations
+  user      User @relation("UserStatus", fields: [userId], references: [id])
+  changedBy User @relation("ChangedBy", fields: [changedByUserId], references: [id])
+
+  @@map("user_account_statuses")
+}
+
+model Division {
+  id        String   @id @default(cuid())
+  code      Int      @unique
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  users User[]
+
+  @@map("divisions")
+}
+
+model Application {
+  id              String                   @id @default(cuid())
+  userId          String                   @map("user_id")
+  applicationType ApplicationType          @map("application_type")
+  applicationData Json                     @map("application_data")
+  currentStatus   ApplicationCurrentStatus @map("current_status")
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  updatedAt       DateTime                 @updatedAt @map("updated_at")
+
+  // Relations
+  user                User                @relation(fields: [userId], references: [id])
+  attachments         Attachment[]
+  applicationStatuses ApplicationStatus[]
+
+  @@map("applications")
+}
+
+model Attachment {
+  id                String         @id @default(cuid())
+  applicationId     String?        @map("application_id")
+  uploadedByUserId  String         @map("uploaded_by_user_id")
+  attachmentType    AttachmentType @map("attachment_type")
+  fileUrl           String         @map("file_url")
+  fileName          String         @map("file_name")
+  metadata          Json?
+  createdAt         DateTime       @default(now()) @map("created_at")
+
+  // Relations
+  application   Application? @relation(fields: [applicationId], references: [id])
+  uploadedByUser User        @relation("UploadedBy", fields: [uploadedByUserId], references: [id])
+
+  @@map("attachments")
+}
+
+model ApplicationStatus {
+  id            String                @id @default(cuid())
+  applicationId String                @map("application_id")
+  actorUserId   String                @map("actor_user_id")
+  status        ApplicationStatusEnum
+  comment       String?
+  createdAt     DateTime              @default(now()) @map("created_at")
+
+  // Relations
+  application Application @relation(fields: [applicationId], references: [id])
+  actor       User        @relation("ActorUser", fields: [actorUserId], references: [id])
+
+  @@map("application_statuses")
+}

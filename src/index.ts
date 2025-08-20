@@ -1,6 +1,6 @@
 import app from './app';
 import logger from './config/logger';
-import { prisma } from './config/database';
+import { db } from './config/database';
 
 const PORT = process.env['PORT'] || 3000;
 
@@ -20,7 +20,7 @@ const gracefulShutdown = async (signal: string) => {
     logger.info('HTTP server closed.');
     
     try {
-      await prisma.$disconnect();
+      await db.$disconnect();
       logger.info('Database connection closed.');
       process.exit(0);
     } catch (error) {

@@ -19,7 +19,8 @@ export class UserController extends BaseController {
     const userResponses: UserResponseDto[] = users.map(user => ({
       id: user.id,
       email: user.email,
-      name: user.name,
+      firstName: user.firstName,
+      lastName: user.lastName,
       role: user.role,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
@@ -44,7 +45,8 @@ export class UserController extends BaseController {
     const userResponse: UserResponseDto = {
       id: user.id,
       email: user.email,
-      name: user.name,
+      firstName: user.firstName,
+      lastName: user.lastName,
       role: user.role,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
@@ -72,7 +74,8 @@ export class UserController extends BaseController {
     const userResponse: UserResponseDto = {
       id: user.id,
       email: user.email,
-      name: user.name,
+      firstName: user.firstName,
+      lastName: user.lastName,
       role: user.role,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
@@ -94,7 +97,8 @@ export class UserController extends BaseController {
     const userResponse: UserResponseDto = {
       id: user.id,
       email: user.email,
-      name: user.name,
+      firstName: user.firstName,
+      lastName: user.lastName,
       role: user.role,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,

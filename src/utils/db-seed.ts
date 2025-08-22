@@ -15,6 +15,7 @@ export async function seedDB() {
       email: 'ds@slnicbridge.lk',
       firstName: 'DS',
       lastName: 'User',
+      phone: '0781234567',
       passwordHash: hashedPassword,
       role: UserRole.DS,
       currentStatus: UserAccountStatusEnum.ACTIVE,

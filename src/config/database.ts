@@ -1,5 +1,4 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import { seedDB } from '../utils/db-seed';
 import dotenv from 'dotenv';
 
 dotenv.config();

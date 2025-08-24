@@ -38,10 +38,10 @@ export class UserController extends BaseController {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      phone: user.phone,
       role: user.role,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-      phone: '',
       currentStatus: 'ACTIVE'
     }));
 
@@ -66,10 +66,10 @@ export class UserController extends BaseController {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      phone: user.phone,
       role: user.role,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-      phone: '',
       currentStatus: 'ACTIVE'
     };
 
@@ -139,10 +139,10 @@ static createUser = async (req: Request, res: Response): Promise<Response<Single
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      phone: user.phone,
       role: user.role,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-      phone: '',
       currentStatus: 'ACTIVE'
     };
 

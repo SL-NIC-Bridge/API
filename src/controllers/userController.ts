@@ -70,7 +70,7 @@ export class UserController extends BaseController {
       role: user.role,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-      currentStatus: 'ACTIVE'
+      currentStatus: user.currentStatus
     };
 
     UserController.logSuccess('Get user by ID', { userId: id });

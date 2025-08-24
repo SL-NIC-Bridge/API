@@ -162,7 +162,7 @@ export class ApplicationController extends BaseController {
       applicationId: log.applicationId,
       actorUserId: log.actorUserId,
       status: log.status as ApplicationCurrentStatus,
-      comment: log.comment ?? undefined,
+      comments: log.comment ?? undefined,
       createdAt: log.createdAt,
       actor: log.actor ? {
         id: log.actor.id,

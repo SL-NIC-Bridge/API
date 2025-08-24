@@ -1,8 +1,8 @@
 import { Division, Prisma } from '@prisma/client';
 import { BaseRepository } from './baseRepository';
-import { CreateWasamaDto, UpdateWasamaDto } from '../types/dto/wasama.dto';
+import { CreateDivisionDto, UpdateDivisionDto } from '../types/dto/division.dto';
 
-export class WasamaRepository extends BaseRepository<
+export class DivisionRepository extends BaseRepository<
   Division,
   Prisma.DivisionCreateInput,
   Prisma.DivisionUpdateInput

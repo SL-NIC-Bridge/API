@@ -16,8 +16,8 @@ export * from './application.dto';
 // notification DTOs
 export * from './notification.dto';
 
-// wasama DTOs
-export * from './wasama.dto';
+// division DTOs
+export * from './division.dto';
 
 // document DTOs
 export * from './document.dto';

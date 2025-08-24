@@ -49,7 +49,7 @@ app.use((req, _res, next) => {
 app.use('/api/v1', routes);
 
 // 404 handler
-app.use('*', (_req, res) => {
+app.use('*_404', (_req, res) => {
   res.status(404).json({
     success: false,
     error: {

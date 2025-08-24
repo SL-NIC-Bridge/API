@@ -98,7 +98,7 @@
 
 import { Response } from 'express';
 import { logger } from '../config/logger';
-import { ApiError, ValidationError } from '../utils/errors';
+import { ValidationError } from '../utils/errors';
 import {
   SuccessResponseDto,
   ErrorResponseDto,

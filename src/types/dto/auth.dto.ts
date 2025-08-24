@@ -1,3 +1,5 @@
+import { UserResponseDto } from "./user.dto";
+
 export interface LoginDto {
   email: string;
   password: string;
@@ -13,19 +15,9 @@ export interface RegisterDto {
 }
 
 export interface AuthResponseDto {
-  success: true;
-  data: {
-    user: {
-      id: string;
-      firstName: string;
-      lastName: string;
-      email: string;
-      role: string;
-      currentStatus: string;
-    };
-    accessToken: string;
-    refreshToken: string;
-  };
+  user: Omit<UserResponseDto, "division">;
+  accessToken: string;
+  refreshToken: string;
 }
 
 export interface RefreshTokenDto {

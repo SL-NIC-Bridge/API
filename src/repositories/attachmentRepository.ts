@@ -9,7 +9,7 @@ export class AttachmentRepository extends BaseRepository<
   protected model = this.prisma.attachment;
 
   // Find attachments by application
-  async findByApplicationId(applicationId: string): Promise<Attachment[]> {
+  async findByApplicationId(applicationId: string) {
     try {
       return await this.model.findMany({
         where: { applicationId },
@@ -33,18 +33,13 @@ export class AttachmentRepository extends BaseRepository<
   }
 
   // Find attachments by user
-  async findByUserId(userId: string): Promise<Attachment[]> {
+  async findByUserId(userId: string) {
     try {
       return await this.model.findMany({
         where: { uploadedByUserId: userId },
         include: {
-          application: {
-            select: {
-              id: true,
-              applicationType: true,
-              currentStatus: true,
-            },
-          },
+          application: true,
+          uploadedByUser: true
         },
         orderBy: {
           createdAt: 'desc',
@@ -56,14 +51,7 @@ export class AttachmentRepository extends BaseRepository<
   }
 
   // Create new attachment
-  async createAttachment(data: {
-    applicationId?: string;
-    uploadedByUserId: string;
-    attachmentType: Prisma.AttachmentCreateInput['attachmentType'];
-    fileUrl: string;
-    fileName: string;
-    metadata?: any;
-  }): Promise<Attachment> {
+  async createAttachment(data: Prisma.AttachmentCreateInput) {
     try {
       return await this.model.create({
         data,

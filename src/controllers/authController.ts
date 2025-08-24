@@ -1,15 +1,16 @@
-import { Request, Response } from 'express';
-import { BaseController } from './baseController';
-import { UserRepository } from '../repositories/userRepository';
-import * as bcrypt from 'bcryptjs';
+import { Request, Response } from "express";
+import { BaseController } from "./baseController";
+import { UserRepository } from "../repositories/userRepository";
+import * as bcrypt from "bcryptjs";
 import {
   LoginDto,
   RegisterDto,
   AuthResponseDto,
   RefreshTokenDto,
-} from '../types/dto/auth.dto';
-import { UserResponseDto } from '../types/dto/user.dto';
-import { UnauthorizedError, ConflictError } from '../utils/errors';
+} from "../types/dto/auth.dto";
+import { UserResponseDto } from "../types/dto/user.dto";
+import { UnauthorizedError, ConflictError } from "../utils/errors";
+import { UserAccountStatusEnum } from "@prisma/client";
 
 export class AuthController extends BaseController {
   private static userRepository = new UserRepository();
@@ -20,21 +21,21 @@ export class AuthController extends BaseController {
   static login = async (req: Request, res: Response): Promise<Response> => {
     const { email, password }: LoginDto = req.body;
 
-    AuthController.validateRequiredFields(req.body, ['email', 'password']);
+    AuthController.validateRequiredFields(req.body, ["email", "password"]);
 
     const user = await AuthController.userRepository.findByEmail(email);
 
     if (!user) {
-      throw new UnauthorizedError('Invalid credentials');
+      throw new UnauthorizedError("Invalid credentials");
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
-      throw new UnauthorizedError('Invalid credentials');
+      throw new UnauthorizedError("Invalid credentials");
     }
 
-    if (user.currentStatus !== 'ACTIVE') {
-      throw new UnauthorizedError('Account is not active');
+    if (user.currentStatus !== UserAccountStatusEnum.ACTIVE) {
+      throw new UnauthorizedError("Account is not active");
     }
 
     const authResponse: AuthResponseDto = {
@@ -44,13 +45,17 @@ export class AuthController extends BaseController {
         lastName: user.lastName,
         email: user.email,
         role: user.role,
+        phone: user.phone,
         currentStatus: user.currentStatus,
+        divisionId: user.divisionId ?? undefined,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
       },
-      accessToken: 'temp-token',
-      refreshToken: 'temp-refresh-token',
+      accessToken: "temp-token",
+      refreshToken: "temp-refresh-token",
     };
 
-    AuthController.logSuccess('User login', { userId: user.id, email });
+    AuthController.logSuccess("User login", { userId: user.id, email });
     return AuthController.sendSuccess(res, authResponse);
   };
 
@@ -61,17 +66,20 @@ export class AuthController extends BaseController {
     const userData: RegisterDto = req.body;
 
     AuthController.validateRequiredFields(req.body, [
-      'firstName',
-      'lastName',
-      'email',
-      'phone',
-      'password',
+      "firstName",
+      "lastName",
+      "email",
+      "phone",
+      "password",
     ]);
 
     // Check if user already exists
-    const existingUser = await AuthController.userRepository.findByEmail(userData.email);
+    const existingUser = await AuthController.userRepository.findByEmail(
+      userData.email
+    );
+
     if (existingUser) {
-      throw new ConflictError('User with this email already exists');
+      throw new ConflictError("User with this email already exists");
     }
 
     // Hash password
@@ -85,8 +93,13 @@ export class AuthController extends BaseController {
       email: userData.email,
       phone: userData.phone,
       passwordHash: hashedPassword, // Use passwordHash for DB
-      role: 'GN',
-      divisionId: userData.divisionId ?? undefined,
+      role: "GN",
+      division: {
+        connect: {
+          id: userData.divisionId!,
+        },
+      },
+      currentStatus: UserAccountStatusEnum.ACTIVE,
     });
 
     const authResponse: AuthResponseDto = {
@@ -97,22 +110,32 @@ export class AuthController extends BaseController {
         email: user.email,
         role: user.role,
         currentStatus: user.currentStatus,
+        divisionId: user.divisionId ?? undefined,
+        phone: user.phone,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
       },
-      accessToken: 'temp-token',
-      refreshToken: 'temp-refresh-token',
+      accessToken: "temp-token",
+      refreshToken: "temp-refresh-token",
     };
 
-    AuthController.logSuccess('User registration', { userId: user.id, email: userData.email });
+    AuthController.logSuccess("User registration", {
+      userId: user.id,
+      email: userData.email,
+    });
     return AuthController.sendSuccess(res, authResponse, 201);
   };
 
   // -----------------------
   // GET CURRENT USER
   // -----------------------
-  static getCurrentUser = async (req: Request, res: Response): Promise<Response> => {
-    const userId = req.headers['x-user-id'] as string;
+  static getCurrentUser = async (
+    req: Request,
+    res: Response
+  ): Promise<Response> => {
+    const userId = req.headers["x-user-id"] as string;
     if (!userId) {
-      throw new UnauthorizedError('User not authenticated');
+      throw new UnauthorizedError("User not authenticated");
     }
 
     const user = await AuthController.userRepository.findById(userId, {
@@ -120,7 +143,7 @@ export class AuthController extends BaseController {
     });
 
     if (!user) {
-      throw new UnauthorizedError('User not found');
+      throw new UnauthorizedError("User not found");
     }
 
     const userResponse: UserResponseDto = {
@@ -128,40 +151,37 @@ export class AuthController extends BaseController {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
-      phone: user.phone ?? '', // fallback for nullable
+      phone: user.phone ?? "",
       role: user.role,
       currentStatus: user.currentStatus,
       divisionId: user.divisionId ?? undefined,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-      division: user.division
-        ? {
-            id: user.division.id,
-            name: user.division.name,
-            code: user.division.code,
-          }
-        : undefined,
+      division: user.division,
     };
 
-    AuthController.logSuccess('Get current user', { userId });
+    AuthController.logSuccess("Get current user", { userId });
     return AuthController.sendSuccess(res, userResponse);
   };
 
   // -----------------------
   // REFRESH TOKEN
   // -----------------------
-  static refreshToken = async (req: Request, res: Response): Promise<Response> => {
+  static refreshToken = async (
+    req: Request,
+    res: Response
+  ): Promise<Response> => {
     const { refreshToken }: RefreshTokenDto = req.body;
 
-    AuthController.validateRequiredFields(req.body, ['refreshToken']);
+    AuthController.validateRequiredFields(req.body, ["refreshToken"]);
 
     // Placeholder implementation
     const response = {
-      accessToken: 'new-temp-token',
-      refreshToken: 'new-temp-refresh-token',
+      accessToken: "new-temp-token",
+      refreshToken: "new-temp-refresh-token",
     };
 
-    AuthController.logSuccess('Token refresh');
+    AuthController.logSuccess("Token refresh");
     return AuthController.sendSuccess(res, response);
   };
 
@@ -170,7 +190,9 @@ export class AuthController extends BaseController {
   // -----------------------
   static logout = async (_req: Request, res: Response): Promise<Response> => {
     // No actual token invalidation yet
-    AuthController.logSuccess('User logout');
-    return AuthController.sendSuccess(res, { message: 'Logged out successfully' });
+    AuthController.logSuccess("User logout");
+    return AuthController.sendSuccess(res, {
+      message: "Logged out successfully",
+    });
   };
 }

@@ -25,12 +25,20 @@ export class DocumentController extends BaseController {
     DocumentController.validateRequiredFields(req.body, ['attachmentType']);
 
     const attachment = await DocumentController.attachmentRepository.createAttachment({
-      applicationId: uploadData.applicationId ?? undefined,
-      uploadedByUserId: userId,
+      uploadedByUser: {
+        connect: {
+          id: userId
+        }
+      },
       attachmentType: uploadData.attachmentType,
       fileUrl: getFileUrl(file.filename),
       fileName: file.originalname,
       metadata: uploadData.metadata,
+      application: {
+        connect: {
+          id: uploadData.applicationId!
+        }
+      }
     });
 
     const documentResponse: DocumentResponseDto = {
@@ -38,14 +46,14 @@ export class DocumentController extends BaseController {
       attachmentType: attachment.attachmentType,
       fileName: attachment.fileName,
       fileUrl: attachment.fileUrl,
-      applicationId: attachment.applicationId ?? undefined,
+      applicationId: attachment.applicationId!,
       metadata: attachment.metadata,
       createdAt: attachment.createdAt,
       uploadedByUser: attachment.uploadedByUserId
         ? {
-            id: attachment.uploadedByUserId.id,
-            firstName: attachment.uploadedByUserId.firstName,
-            lastName: attachment.uploadedByUserId.lastName,
+            id: attachment.uploadedByUser.id,
+            firstName: attachment.uploadedByUser.firstName,
+            lastName: attachment.uploadedByUser.lastName,
           }
         : {
             id: '',
@@ -67,6 +75,10 @@ export class DocumentController extends BaseController {
   static getDocuments = async (req: Request, res: Response): Promise<Response> => {
     const { applicationId } = req.params;
 
+    if (!applicationId){
+       throw new NotFoundError('Application ID is required');
+    }
+
     DocumentController.validateRequiredParams(req.params, ['applicationId']);
 
     const attachments = await DocumentController.attachmentRepository.findByApplicationId(applicationId);
@@ -76,14 +88,14 @@ export class DocumentController extends BaseController {
       attachmentType: attachment.attachmentType,
       fileName: attachment.fileName,
       fileUrl: attachment.fileUrl,
-      applicationId: attachment.applicationId ?? undefined,
+      applicationId: attachment.applicationId!,
       metadata: attachment.metadata,
       createdAt: attachment.createdAt,
       uploadedByUser: attachment.uploadedByUserId
         ? {
-            id: attachment.uploadedByUserId.id,
-            firstName: attachment.uploadedByUserId.firstName,
-            lastName: attachment.uploadedByUserId.lastName,
+            id: attachment.uploadedByUser.id,
+            firstName: attachment.uploadedByUser.firstName,
+            lastName: attachment.uploadedByUser.lastName,
           }
         : {
             id: '',
@@ -109,13 +121,13 @@ export class DocumentController extends BaseController {
       attachmentType: attachment.attachmentType,
       fileName: attachment.fileName,
       fileUrl: attachment.fileUrl,
-      applicationId: attachment.applicationId ?? undefined,
+      applicationId: attachment.applicationId!,
       metadata: attachment.metadata,
       createdAt: attachment.createdAt,
       uploadedByUser: {
         id: userId,
-        firstName: '',
-        lastName: '',
+        firstName: attachment.uploadedByUser.firstName,
+        lastName:  attachment.uploadedByUser.firstName,
       },
     }));
 
@@ -151,6 +163,8 @@ export class DocumentController extends BaseController {
   // Get signed document (placeholder)
   static getSignedDocument = async (req: Request, res: Response): Promise<Response> => {
     const { documentId } = req.params;
+
+    if(!documentId) throw new NotFoundError('Document ID is required')
 
     DocumentController.validateRequiredParams(req.params, ['documentId']);
 

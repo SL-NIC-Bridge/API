@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import { NotFoundError, UnauthorizedError } from '../utils/errors';
 import { BaseController } from './baseController';
-import { NotificationRepository } from '@/repositories/notificationRepository';
-import { NotificationResponseDto } from '@/types/dto/notification.dto';
+import { NotificationRepository } from '../repositories/notificationRepository';
+import { NotificationResponseDto } from '../types/dto/notification.dto';
 
 export class NotificationController extends BaseController {
   private static notificationRepository = new NotificationRepository();

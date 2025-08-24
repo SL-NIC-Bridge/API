@@ -13,7 +13,7 @@ export const registerGNSchema = z.object({
   nicNumber: z.string().regex(/^\d{9}[vVxX]|\d{12}$/, 'Invalid NIC number format'),
   phone: z.string().min(10, 'Phone number must be at least 10 digits'),
   address: z.string().min(1, 'Address is required'),
-  wasamaId: z.string().uuid('Invalid wasama ID'),
+  divisionId: z.string().uuid('Invalid division ID'),
 });
 
 export const createApplicationSchema = z.object({

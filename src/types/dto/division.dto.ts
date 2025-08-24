@@ -1,13 +1,13 @@
-export interface CreateWasamaDto {
+export interface CreateDivisionDto {
   code: number;
   name: string;
 }
 
-export interface UpdateWasamaDto {
+export interface UpdateDivisionDto {
   name?: string;
 }
 
-export interface WasamaResponseDto {
+export interface DivisionResponseDto {
   id: string;
   code: number;
   name: string;

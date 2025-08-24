@@ -1,29 +1,29 @@
 // import { BaseRepository } from './baseRepository';
 // import { CreateUserDto, UpdateUserDto } from '../types/dto';
-// import { UserAccountStatusEnum, UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 
-// export interface UserSelect {
-//   id: boolean;
-//   email: boolean;
-//   firstName: boolean;
-//   lastName: boolean;
-//   role: boolean;
-//   createdAt: boolean;
-//   updatedAt: boolean;
-//   currentStatus: boolean;
-// }
+export interface UserSelect {
+  id: boolean;
+  email: boolean;
+  firstName: boolean;
+  lastName: boolean;
+  role: boolean;
+  createdAt: boolean;
+  updatedAt: boolean;
+  currentStatus: boolean;
+}
 
 // // User without password for safe return types
-// export interface UserWithoutPassword {
-//   id: string;
-//   email: string;
-//   firstName: string;
-//   lastName: string;
-//   role: UserRole;
-//   createdAt: Date;
-//   updatedAt: Date;
-//   currentStatus: UserAccountStatusEnum;
-// }
+export interface UserWithoutPassword {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: UserRole;
+  createdAt: Date;
+  updatedAt: Date;
+  currentStatus: UserAccountStatusEnum;
+}
 
 // export class UserRepository extends BaseRepository {
 //   private readonly defaultSelect: UserSelect = {
@@ -241,7 +241,7 @@ export class UserRepository extends BaseRepository<
 
   async updateStatus(
     id: string,
-    status: UserCurrentStatus,           // FIX: use correct enum
+    status: UserAccountStatusEnum,           // FIX: use correct enum
     changedByUserId: string,
     comment?: string                     // comment is optional
   ): Promise<User> {

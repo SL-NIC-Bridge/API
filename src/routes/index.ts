@@ -4,7 +4,8 @@ import userRoutes from './user.routes';
 import notificationRoutes from './notification.routes';
 import applicationRoutes from './application.routes';
 import documentRoutes from './document.routes';
-import wasamaRoutes from './wasama.routes';
+import divisionRoutes from './division.routes';
+import { version } from '../../package.json';
 
 const router = Router();
 
@@ -15,17 +16,19 @@ router.get('/health', (_req, res) => {
     data: {
       status: 'OK',
       timestamp: new Date().toISOString(),
-      version: '1.0.0',
+      version,
     },
   });
 });
 
-// API routes
+// public routes
 router.use('/auth', authRoutes);
+
+// secure routes
 router.use('/users', userRoutes);
 router.use('/applications', applicationRoutes);
 router.use('/documents', documentRoutes);
-router.use('/wasamas', wasamaRoutes);
+router.use('/divisions', divisionRoutes);
 router.use('/notifications', notificationRoutes);
 
 export default router;

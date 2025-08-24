@@ -16,7 +16,7 @@ export class ApplicationRepository extends BaseRepository<
     page: number = 1,
     limit: number = 10,
     search?: string
-  ): Promise<{ data: Application[]; total: number }> {
+  ){
     try {
       const where: Prisma.ApplicationWhereInput = {};
 
@@ -62,7 +62,7 @@ export class ApplicationRepository extends BaseRepository<
   }
 
   // Get single application with details
-  async findByIdWithDetails(id: string): Promise<Application | null> {
+  async findByIdWithDetails(id: string) {
     try {
       return await this.model.findUnique({
         where: { id },
@@ -86,7 +86,7 @@ async updateStatus(
   status: ApplicationStatusEnum,
   actorUserId: string,
   comment?: string
-): Promise<Application> {
+){
   try {
     return await this.prisma.$transaction(async (tx) => {
       const application = await tx.application.update({
@@ -112,7 +112,7 @@ async updateStatus(
 
 
   // Get audit logs
-  async getAuditLogs(applicationId: string): Promise<ApplicationStatus[]> {
+  async getAuditLogs(applicationId: string) {
     try {
       return await this.prisma.applicationStatus.findMany({
         where: { applicationId },

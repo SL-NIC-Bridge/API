@@ -28,7 +28,6 @@ import { UserController } from '../controllers/userController';
 import { asyncHandler } from '../middleware/errorHandler';
 import { authenticateToken } from '../middleware/auth';
 import { requireAdmin, requireGNOrAdmin } from '../middleware/roleGuard';
-import { WasamaController } from '@/controllers/wasamaController';
 
 const router = Router();
 
@@ -49,6 +48,5 @@ router.post('/gn/:id/reset-password', requireAdmin, asyncHandler(UserController.
 // User CRUD (admin only)
 router.post('/', requireAdmin, asyncHandler(UserController.createUser));
 router.put('/:id', requireAdmin, asyncHandler(UserController.updateUser));
-router.delete('/:id', asyncHandler(WasamaController.deleteWasama));
 
 export default router;

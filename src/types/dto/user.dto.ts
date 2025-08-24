@@ -50,8 +50,7 @@
 //   data: UserResponseDto;
 // };
 
-
-import { UserRole, UserCurrentStatus } from '@prisma/client';
+import { UserRole, UserCurrentStatus } from "@prisma/client";
 
 export interface CreateUserDto {
   firstName: string;
@@ -83,11 +82,13 @@ export interface UserResponseDto {
   divisionId?: string | undefined;
   createdAt: Date;
   updatedAt: Date;
-  division?: {
-  id: string;
-  name: string;
-  code: number;
-} | undefined;
+  division?:
+    | {
+        id: string;
+        name: string;
+        code: number;
+      }
+    | undefined;
 }
 
 export interface UserListResponseDto {

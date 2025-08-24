@@ -89,7 +89,7 @@ export abstract class BaseRepository<
     }
   }
 
-  async findById(id: string, include?: any): Promise<ModelType | null> {
+  async findById(id: string, include?: any){
     try {
       return await this.model.findUnique({
         where: { id },
@@ -101,7 +101,7 @@ export abstract class BaseRepository<
     }
   }
 
-  async create(data: CreateInput): Promise<ModelType> {
+  async create(data: CreateInput) {
     try {
       return await this.model.create({ data });
     } catch (error) {

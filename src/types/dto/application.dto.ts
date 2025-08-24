@@ -46,7 +46,7 @@ export interface AuditLogResponseDto {
   applicationId: string;
   actorUserId: string;
   status: ApplicationCurrentStatus;
-  comment?: string; // make optional
+  comment?: string;
   createdAt: Date;
   actor: {
     id: string;

@@ -30,7 +30,7 @@
   "dependencies": {
     "@prisma/client": "^6.13.0",
     "aws-sdk": "^2.1501.0",
-    "bcryptjs": "^3.0.2",
+    "bcryptjs": "^2.4.3",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
@@ -49,7 +49,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
+    "@types/bcryptjs": "^2.4.2",
     "@types/compression": "^1.7.5",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.3",

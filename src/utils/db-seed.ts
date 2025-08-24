@@ -1,4 +1,4 @@
-import bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcryptjs';
 import { db } from '../config/database';
 import { UserRole, UserAccountStatusEnum } from '@prisma/client';
 

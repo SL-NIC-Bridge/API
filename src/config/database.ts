@@ -16,8 +16,8 @@
 
 // // Configure Prisma Client
 // const prismaConfig: Prisma.PrismaClientOptions = {
-//   log: process.env['NODE_ENV'] === 'development' 
-//     ? ['query', 'info', 'warn', 'error'] 
+//   log: process.env['NODE_ENV'] === 'development'
+//     ? ['query', 'info', 'warn', 'error']
 //     : ['warn', 'error'],
 //   datasources: {
 //     db: {
@@ -29,18 +29,18 @@
 // // Create Prisma Client with extensions
 // function getExtendedPrismaClient(config: Prisma.PrismaClientOptions) {
 //   const prisma = new PrismaClient(config);
-  
+
 //   return prisma.$extends({
 //     query: {
 //       async $allOperations({ operation, model, args, query }) {
 //         const start = performance.now();
 //         const result = await query(args);
 //         const end = performance.now();
-        
+
 //         if (process.env['NODE_ENV'] === 'development' && model) {
 //           console.log(`Query ${model}.${operation} took ${(end - start).toFixed(2)}ms`);
 //         }
-        
+
 //         return result;
 //       },
 //     },
@@ -61,48 +61,48 @@
 
 // export { db };
 
-import { PrismaClient } from '@prisma/client';
-import { logger } from './logger';
+import { PrismaClient } from "@prisma/client";
+import { logger } from "./logger";
 
 export const prisma = new PrismaClient({
   log: [
     {
-      emit: 'event',
-      level: 'query',
+      emit: "event",
+      level: "query",
     },
     {
-      emit: 'event',
-      level: 'error',
+      emit: "event",
+      level: "error",
     },
     {
-      emit: 'event',
-      level: 'info',
+      emit: "event",
+      level: "info",
     },
     {
-      emit: 'event',
-      level: 'warn',
+      emit: "event",
+      level: "warn",
     },
   ],
 });
 
-prisma.$on('error', (e) => {
-  logger.error('Database error:', e);
+prisma.$on("error", (e) => {
+  logger.error("Database error:", e);
 });
 
-prisma.$on('warn', (e) => {
-  logger.warn('Database warning:', e);
+prisma.$on("warn", (e) => {
+  logger.warn("Database warning:", e);
 });
 
-prisma.$on('info', (e) => {
-  logger.info('Database info:', e);
+prisma.$on("info", (e) => {
+  logger.info("Database info:", e);
 });
 
-prisma.$on('query', (e) => {
-  if (process.env['NODE_ENV'] === 'development') {
-    logger.debug('Database query:', {
+prisma.$on("query", (e) => {
+  if (process.env["NODE_ENV"] === "development") {
+    logger.debug("Database query:", {
       query: e.query,
       params: e.params,
-      duration: e.duration + 'ms',
+      duration: e.duration + "ms",
     });
   }
 });
@@ -110,9 +110,9 @@ prisma.$on('query', (e) => {
 export const connectDatabase = async () => {
   try {
     await prisma.$connect();
-    logger.info('Database connected successfully');
+    logger.info("Database connected successfully");
   } catch (error) {
-    logger.error('Database connection error:', error);
+    logger.error("Database connection error:", error);
     process.exit(1);
   }
 };
@@ -120,8 +120,10 @@ export const connectDatabase = async () => {
 export const disconnectDatabase = async () => {
   try {
     await prisma.$disconnect();
-    logger.info('Database disconnected successfully');
+    logger.info("Database disconnected successfully");
   } catch (error) {
-    logger.error('Database disconnection error:', error);
+    logger.error("Database disconnection error:", error);
   }
 };
+
+export { prisma as db };

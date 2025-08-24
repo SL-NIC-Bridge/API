@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { BaseController } from './baseController';
 import { UserRepository } from '../repositories/userRepository';
-import bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcryptjs';
 import {
   LoginDto,
   RegisterDto,

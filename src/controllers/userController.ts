@@ -8,7 +8,7 @@ import {
   UserListResponseDto, 
   SingleUserResponseDto 
 } from '../types/dto';
-import bcrypt from 'bcryptjs/umd/types';
+import * as bcrypt from 'bcryptjs';
 import { UserCurrentStatus } from '@prisma/client';
 
 export class UserController extends BaseController {

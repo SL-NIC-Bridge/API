@@ -8,8 +8,25 @@ import {
   UserListResponseDto, 
   SingleUserResponseDto 
 } from '../types/dto';
+import bcrypt from 'bcryptjs/umd/types';
+import { UserCurrentStatus } from '@prisma/client';
 
 export class UserController extends BaseController {
+    static getPendingRegistrations(getPendingRegistrations: any): import("express-serve-static-core").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>> {
+        throw new Error('Method not implemented.');
+    }
+    static approveRegistration(approveRegistration: any): import("express-serve-static-core").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>> {
+        throw new Error('Method not implemented.');
+    }
+    static getAllGNs(getAllGNs: any): import("express-serve-static-core").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>> {
+        throw new Error('Method not implemented.');
+    }
+    static updateGN(updateGN: any): import("express-serve-static-core").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>> {
+        throw new Error('Method not implemented.');
+    }
+    static resetPassword(resetPassword: any): import("express-serve-static-core").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>> {
+        throw new Error('Method not implemented.');
+    }
   private static userRepository = new UserRepository();
 
   // Get all users
@@ -24,6 +41,8 @@ export class UserController extends BaseController {
       role: user.role,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      phone: '',
+      currentStatus: 'ACTIVE'
     }));
 
     UserController.logSuccess('Get all users', { count: userResponses.length });
@@ -50,6 +69,8 @@ export class UserController extends BaseController {
       role: user.role,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      phone: '',
+      currentStatus: 'ACTIVE'
     };
 
     UserController.logSuccess('Get user by ID', { userId: id });
@@ -57,33 +78,52 @@ export class UserController extends BaseController {
   }
 
   // Create new user
-  static createUser = async (req: Request, res: Response): Promise<Response<SingleUserResponseDto>> => {
-    const userData: CreateUserDto = req.body;
+static createUser = async (req: Request, res: Response): Promise<Response<SingleUserResponseDto>> => {
+  const userData: CreateUserDto = req.body;
 
-    UserController.validateRequiredFields(req.body, ['email', 'password']);
+  UserController.validateRequiredFields(req.body, ['email', 'password']);
 
-    // Check if user already exists
-    const existingUser = await UserController.userRepository.findByEmail(userData.email);
-
-    if (existingUser) {
-      throw new Error('User with this email already exists');
-    }
-
-    const user = await UserController.userRepository.create(userData);
-
-    const userResponse: UserResponseDto = {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
-
-    UserController.logSuccess('Create user', { userId: user.id, email: userData.email });
-    return UserController.sendSuccess(res, userResponse, 201) as Response<SingleUserResponseDto>;
+  // Check if user already exists
+  const existingUser = await UserController.userRepository.findByEmail(userData.email);
+  if (existingUser) {
+    throw new Error('User with this email already exists');
   }
+
+  // Hash the password
+  const passwordHash = await bcrypt.hash(userData.password, 10);
+
+  // Map DTO to Prisma UserCreateInput
+  const createInput = {
+    firstName: userData.firstName,
+    lastName: userData.lastName,
+    email: userData.email,
+    phone: userData.phone,
+    passwordHash, // required by Prisma
+    role: userData.role ?? 'STANDARD', // default role
+    divisionId: userData.divisionId ?? null,
+    currentStatus: UserCurrentStatus.ACTIVE, // default status
+  };
+
+  // Create user in database
+  const user = await UserController.userRepository.create(createInput);
+
+  // Map to response DTO
+  const userResponse: UserResponseDto = {
+    id: user.id,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.role,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+    phone: user.phone,
+    currentStatus: user.currentStatus,
+    divisionId: user.divisionId ?? undefined,
+  };
+
+  UserController.logSuccess('Create user', { userId: user.id, email: userData.email });
+  return UserController.sendSuccess(res, userResponse, 201) as Response<SingleUserResponseDto>;
+};
 
   // Update user
   static updateUser = async (req: Request, res: Response): Promise<Response<SingleUserResponseDto>> => {
@@ -102,6 +142,8 @@ export class UserController extends BaseController {
       role: user.role,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      phone: '',
+      currentStatus: 'ACTIVE'
     };
 
     UserController.logSuccess('Update user', { userId: id });

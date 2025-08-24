@@ -6,3 +6,20 @@ export * from './user.dto';
 
 // Health DTOs
 export * from './health.dto'; 
+
+// Auth DTOs
+export * from './auth.dto';
+
+// application DTOs
+export * from './application.dto';
+
+// notification DTOs
+export * from './notification.dto';
+
+// wasama DTOs
+export * from './wasama.dto';
+
+// document DTOs
+export * from './document.dto';
+
+

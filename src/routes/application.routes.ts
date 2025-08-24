@@ -1,0 +1,19 @@
+import { Router } from 'express';
+import { ApplicationController } from '../controllers/applicationController';
+import { asyncHandler } from '../middleware/errorHandler';
+import { authenticateToken } from '../middleware/auth';
+import { requireGNOrAdmin } from '../middleware/roleGuard';
+
+const router = Router();
+
+// All routes require authentication
+router.use(authenticateToken);
+
+// Application routes
+router.post('/', asyncHandler(ApplicationController.createApplication));
+router.get('/', asyncHandler(ApplicationController.getApplications));
+router.get('/:id', asyncHandler(ApplicationController.getApplication));
+router.patch('/:id/status', requireGNOrAdmin, asyncHandler(ApplicationController.updateStatus));
+router.get('/:id/audit-logs', requireGNOrAdmin, asyncHandler(ApplicationController.getAuditLogs));
+
+export default router;

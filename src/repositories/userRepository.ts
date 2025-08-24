@@ -7,6 +7,7 @@ export interface UserSelect {
   email: boolean;
   firstName: boolean;
   lastName: boolean;
+  phone: boolean;
   role: boolean;
   createdAt: boolean;
   updatedAt: boolean;
@@ -19,6 +20,7 @@ export interface UserWithoutPassword {
   email: string;
   firstName: string;
   lastName: string;
+  phone: string;
   role: UserRole;
   createdAt: Date;
   updatedAt: Date;
@@ -31,6 +33,7 @@ export class UserRepository extends BaseRepository {
     email: true,
     firstName: true,
     lastName: true,
+    phone: true,
     role: true,
     createdAt: true,
     updatedAt: true,
@@ -89,6 +92,7 @@ export class UserRepository extends BaseRepository {
           email: userData.email,
           firstName: userData.firstName,
           lastName: userData.lastName,
+          phone: userData.phone,
           passwordHash: userData.password, // Note: In production, hash the password
           role: userData.role || UserRole.STANDARD,
           currentStatus: UserAccountStatusEnum.ACTIVE

@@ -6,6 +6,7 @@ export interface IUser {
   email: string;
   firstName: string;
   lastName: string;
+  phone: string;
   role: UserRole;
   createdAt: Date;
   updatedAt: Date;
@@ -16,6 +17,7 @@ export interface CreateUserDto {
   email: string;
   firstName: string;
   lastName: string;
+  phone: string;
   password: string;
   role: UserRole;
 }
@@ -25,6 +27,7 @@ export interface UpdateUserDto {
   email?: string;
   firstName?: string;
   lastName?: string;
+  phone?: string;
 }
 
 // User response DTO (excludes password)
@@ -33,6 +36,7 @@ export interface UserResponseDto {
   email: string;
   firstName: string;
   lastName: string;
+  phone: string;
   role: UserRole;
   createdAt: Date;
   updatedAt: Date;

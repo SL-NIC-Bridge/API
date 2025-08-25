@@ -3,7 +3,7 @@ import { UserRole } from '@prisma/client';
 import { ForbiddenError, UnauthorizedError } from '../utils/errors';
 
 export const requireRole = (allowedRoles: UserRole[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
     try {
       const user = (req as any).user;
 

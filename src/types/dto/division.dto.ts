@@ -1,5 +1,5 @@
 export interface CreateDivisionDto {
-  code: number;
+  code: string;
   name: string;
 }
 
@@ -9,7 +9,7 @@ export interface UpdateDivisionDto {
 
 export interface DivisionResponseDto {
   id: string;
-  code: number;
+  code: string;
   name: string;
   createdAt: Date;
   updatedAt: Date;

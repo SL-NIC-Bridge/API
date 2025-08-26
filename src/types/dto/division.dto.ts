@@ -5,6 +5,7 @@ export interface CreateDivisionDto {
 
 export interface UpdateDivisionDto {
   name?: string;
+  code?: string;
 }
 
 export interface DivisionResponseDto {

@@ -9,13 +9,15 @@ import {
   AuditLogResponseDto
 } from '../types/dto/application.dto';
 import { NotFoundError, UnauthorizedError } from '../utils/errors';
-import { ApplicationCurrentStatus, ApplicationType } from '@prisma/client';
+import { ApplicationCurrentStatus, ApplicationType, $Enums } from '@prisma/client';
+
+import { EmailService } from '../services/EmailService';
 
 export class ApplicationController extends BaseController {
   private static applicationRepository = new ApplicationRepository();
 
   // Create application
-  static createApplication = async (req: Request, res: Response): Promise<Response> => {
+  static createApplication = async (req: Request, res: Response) => {
     const userId = req.headers['x-user-id'] as string | undefined;
     const applicationData: CreateApplicationDto = req.body;
 
@@ -28,6 +30,28 @@ export class ApplicationController extends BaseController {
       currentStatus: ApplicationCurrentStatus.SUBMITTED,
       user: { connect: { id: userId } },
     });
+
+    // Get user details for email
+    const applicationWithUser = await ApplicationController.applicationRepository.findByIdWithDetails(application.id);
+    
+    if (applicationWithUser?.user) {
+      // Send welcome email notification
+      try {
+        await EmailService.sendApplicationStatusUpdate({
+          userFirstName: applicationWithUser.user.firstName,
+          userLastName: applicationWithUser.user.lastName,
+          userEmail: applicationWithUser.user.email,
+          applicationId: application.id,
+          applicationType: application.applicationType,
+          status: 'SUBMITTED' as $Enums.ApplicationCurrentStatus,
+        });
+        ApplicationController.logSuccess('Welcome email sent', { applicationId: application.id, userEmail: applicationWithUser.user.email });
+      } catch (emailError) {
+        // Log email error but don't fail the application creation
+        console.error('Failed to send welcome email:', emailError);
+        ApplicationController.logError('Welcome email failed', { applicationId: application.id, error: emailError });
+      }
+    }
 
     const applicationResponse: ApplicationResponseDto = {
       id: application.id,
@@ -91,7 +115,7 @@ export class ApplicationController extends BaseController {
   }
 
   // Get application by ID
-  static getApplication = async (req: Request, res: Response): Promise<Response> => {
+  static getApplication = async (req: Request, res: Response) => {
     const id = req.params['id'];
     ApplicationController.validateRequiredParams(req.params, ['id']);
     if (!id) throw new NotFoundError('Application ID is required');
@@ -127,7 +151,7 @@ export class ApplicationController extends BaseController {
   }
 
   // Update application status
-  static updateStatus = async (req: Request, res: Response): Promise<Response> => {
+  static updateStatus = async (req: Request, res: Response) => {
     const id = req.params['id'];
     const { status, comment }: UpdateApplicationStatusDto = req.body;
     const actorUserId = req.headers['x-user-id'] as string | undefined;
@@ -137,9 +161,46 @@ export class ApplicationController extends BaseController {
     if (!actorUserId) throw new UnauthorizedError('User not authenticated');
     if (!id) throw new NotFoundError('Application ID is required');
 
+    // Get application with user details before updating
+    const applicationBefore = await ApplicationController.applicationRepository.findByIdWithDetails(id);
+    if (!applicationBefore) throw new NotFoundError('Application not found');
+
+    // Update the status
     const application = await ApplicationController.applicationRepository.updateStatus(
       id, status as ApplicationCurrentStatus, actorUserId, comment
     );
+
+    // Get actor user details for email
+    const actorUser = await ApplicationController.applicationRepository.findUserById(actorUserId);
+
+    // Send email notification to the application owner
+    if (applicationBefore.user && applicationBefore.currentStatus !== status) {
+      try {
+        await EmailService.sendApplicationStatusUpdate({
+          userFirstName: applicationBefore.user.firstName,
+          userLastName: applicationBefore.user.lastName,
+          userEmail: applicationBefore.user.email,
+          applicationId: id,
+          applicationType: applicationBefore.applicationType,
+          status: status as ApplicationCurrentStatus,
+          comment: comment,
+          actorName: actorUser ? `${actorUser.firstName} ${actorUser.lastName}` : undefined,
+        });
+        
+        ApplicationController.logSuccess('Status update email sent', { 
+          applicationId: id, 
+          userEmail: applicationBefore.user.email, 
+          newStatus: status 
+        });
+      } catch (emailError) {
+        // Log email error but don't fail the status update
+        console.error('Failed to send status update email:', emailError);
+        ApplicationController.logError('Status update email failed', { 
+          applicationId: id, 
+          error: emailError 
+        });
+      }
+    }
 
     ApplicationController.logSuccess('Update application status', { applicationId: id, status, actorUserId });
     return ApplicationController.sendSuccess(res, { 
@@ -150,7 +211,7 @@ export class ApplicationController extends BaseController {
   }
 
   // Get audit logs for application
-  static getAuditLogs = async (req: Request, res: Response): Promise<Response> => {
+  static getAuditLogs = async (req: Request, res: Response) => {
     const id = req.params['id'];
     ApplicationController.validateRequiredParams(req.params, ['id']);
     if (!id) throw new NotFoundError('Application ID is required');
@@ -175,5 +236,35 @@ export class ApplicationController extends BaseController {
 
     ApplicationController.logSuccess('Get audit logs', { applicationId: id, count: auditLogResponses.length });
     return ApplicationController.sendSuccess(res, auditLogResponses);
+  }
+
+  /**
+   * Resend notification email for current application status
+   */
+  static resendNotification = async (req: Request, res: Response) => {
+    const id = req.params['id'];
+    ApplicationController.validateRequiredParams(req.params, ['id']);
+    if (!id) throw new NotFoundError('Application ID is required');
+
+    const application = await ApplicationController.applicationRepository.findByIdWithDetails(id);
+    if (!application) throw new NotFoundError('Application not found');
+    if (!application.user) throw new NotFoundError('Application user not found');
+
+    try {
+      await EmailService.sendApplicationStatusUpdate({
+        userFirstName: application.user.firstName,
+        userLastName: application.user.lastName,
+        userEmail: application.user.email,
+        applicationId: application.id,
+        applicationType: application.applicationType,
+        status: application.currentStatus,
+      });
+
+      ApplicationController.logSuccess('Notification resent', { applicationId: id, userEmail: application.user.email });
+      return ApplicationController.sendSuccess(res, { message: 'Notification email sent successfully' });
+    } catch (emailError) {
+      ApplicationController.logError('Failed to resend notification', { applicationId: id, error: emailError });
+      throw new Error('Failed to send notification email');
+    }
   }
 }

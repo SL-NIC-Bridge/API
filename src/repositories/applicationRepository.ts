@@ -1,7 +1,9 @@
-import { Application, Prisma, ApplicationStatus } from '@prisma/client';
+import { Application, Prisma, ApplicationCurrentStatus } from '@prisma/client';
 import { BaseRepository } from './baseRepository';
-import { CreateApplicationDto, UpdateApplicationStatusDto, ApplicationFilterDto } from '../types/dto/application.dto';
+import {  ApplicationFilterDto } from '../types/dto/application.dto';
 import { ApplicationStatusEnum } from '@prisma/client';
+
+import { EmailService } from '../services/EmailService';
 
 export class ApplicationRepository extends BaseRepository<
   Application,
@@ -123,4 +125,116 @@ async updateStatus(
       throw error;
     }
   }
+
+  // Add these methods to your ApplicationRepository class
+
+/**
+ * Find user by ID for getting actor details
+ */
+async findUserById(userId: string) {
+  return await this.prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      role: true,
+    }
+  });
+}
+
+/**
+ * Update application status with email notification trigger
+ */
+async updateStatusWithNotification(
+  id: string, 
+  status: ApplicationCurrentStatus, 
+  actorUserId: string, 
+  comment?: string
+) {
+  // Get application with user details before update
+  const applicationBefore = await this.findByIdWithDetails(id);
+  if (!applicationBefore) {
+    throw new Error('Application not found');
+  }
+
+  // Update the status
+  const updatedApplication = await this.updateStatus(id, status, actorUserId, comment);
+
+  // Get actor user details
+  const actorUser = await this.findUserById(actorUserId);
+
+  // Prepare email data if user exists and status actually changed
+  if (applicationBefore.user && applicationBefore.currentStatus !== status) {
+    const emailData = {
+      userFirstName: applicationBefore.user.firstName,
+      userLastName: applicationBefore.user.lastName,
+      userEmail: applicationBefore.user.email,
+      applicationId: id,
+      applicationType: applicationBefore.applicationType,
+      status: status,
+      comment: comment,
+      actorName: actorUser ? `${actorUser.firstName} ${actorUser.lastName}` : undefined,
+    };
+
+    // Send email notification (async, don't wait for it)
+    EmailService.sendApplicationStatusUpdate(emailData)
+      .catch(error => {
+        console.error('Failed to send status update email:', error);
+      });
+  }
+
+  return updatedApplication;
+}
+
+/**
+ * Bulk status update with email notifications
+ */
+async bulkUpdateStatus(
+  applicationIds: string[], 
+  status: ApplicationCurrentStatus, 
+  actorUserId: string, 
+  comment?: string
+) {
+  const results = [];
+  const emailQueue = [];
+
+  for (const id of applicationIds) {
+    try {
+      const applicationBefore = await this.findByIdWithDetails(id);
+      if (!applicationBefore) continue;
+
+      const updatedApplication = await this.updateStatus(id, status, actorUserId, comment);
+      results.push(updatedApplication);
+
+      // Prepare email data for batch sending
+      if (applicationBefore.user && applicationBefore.currentStatus !== status) {
+        const actorUser = await this.findUserById(actorUserId);
+        emailQueue.push({
+          userFirstName: applicationBefore.user.firstName,
+          userLastName: applicationBefore.user.lastName,
+          userEmail: applicationBefore.user.email,
+          applicationId: id,
+          applicationType: applicationBefore.applicationType,
+          status: status,
+          comment: comment,
+          actorName: actorUser ? `${actorUser.firstName} ${actorUser.lastName}` : undefined,
+        });
+      }
+    } catch (error) {
+      console.error(`Failed to update application ${id}:`, error);
+    }
+  }
+
+  // Send bulk emails (async, don't wait)
+  if (emailQueue.length > 0) {
+    EmailService.sendBulkStatusUpdates(emailQueue)
+      .catch(error => {
+        console.error('Failed to send bulk status update emails:', error);
+      });
+  }
+
+  return results;
+}
 }

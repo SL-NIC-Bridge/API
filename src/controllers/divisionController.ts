@@ -7,7 +7,7 @@ import {
   DivisionResponseDto
 } from '../types/dto/division.dto';
 import { NotFoundError, ConflictError } from '../utils/errors';
-import { EmailService } from '../services/EmailService';
+import { DivisionEmailService } from '../services/DivisionEmailService';
 
 export class DivisionController extends BaseController {
   private static divisionRepository = new DivisionRepository();
@@ -73,7 +73,7 @@ export class DivisionController extends BaseController {
 
       // Send email notification (now with detailed logging)
       console.log('🎉 Division created successfully, sending email notification...');
-      const emailResult = await EmailService.sendDivisionCreated({
+      const emailResult = await DivisionEmailService.sendDivisionCreated({
         id: division.id,
         code: division.code,
         name: division.name,
@@ -103,7 +103,7 @@ export class DivisionController extends BaseController {
       console.error('❌ Error creating division:', error);
       
       // Send error alert email for division creation failures
-      EmailService.sendSystemAlert(
+      DivisionEmailService.sendSystemAlert(
         'Division Creation Failed',
         `Failed to create division with code: ${req.body.code}`,
         { 
@@ -153,7 +153,7 @@ export class DivisionController extends BaseController {
       );
 
       if (hasChanges) {
-        EmailService.sendDivisionUpdated(
+        DivisionEmailService.sendDivisionUpdated(
           {
             id: division.id,
             code: division.code,
@@ -172,7 +172,7 @@ export class DivisionController extends BaseController {
 
     } catch (error) {
       // Send error alert email for division update failures
-      EmailService.sendSystemAlert(
+      DivisionEmailService.sendSystemAlert(
         'Division Update Failed',
         `Failed to update division with ID: ${req.params['id']}`,
         { 
@@ -203,7 +203,7 @@ export class DivisionController extends BaseController {
       await DivisionController.divisionRepository.deleteById(id);
 
       // Send email notification (non-blocking)
-      EmailService.sendDivisionDeleted({
+      DivisionEmailService.sendDivisionDeleted({
         id: divisionToDelete.id,
         code: divisionToDelete.code,
         name: divisionToDelete.name,
@@ -217,7 +217,7 @@ export class DivisionController extends BaseController {
 
     } catch (error) {
       // Send error alert email for division deletion failures
-      EmailService.sendSystemAlert(
+      DivisionEmailService.sendSystemAlert(
         'Division Deletion Failed',
         `Failed to delete division with ID: ${req.params['id']}`,
         { 
@@ -243,7 +243,7 @@ export class DivisionController extends BaseController {
         createdAt: new Date(),
       };
 
-      await EmailService.sendDivisionCreated(testDivision);
+      await DivisionEmailService.sendDivisionCreated(testDivision);
       
       return DivisionController.sendSuccess(res, { message: 'Test email sent successfully' });
 
@@ -257,7 +257,7 @@ export class DivisionController extends BaseController {
   static emailHealthCheck = async (_req: Request, res: Response): Promise<Response> => {
     try {
       console.log('🔍 Performing email health check...');
-      const connectionResult = await EmailService.testConnection();
+      const connectionResult = await DivisionEmailService.testConnection();
       
       console.log('📊 Health check result:', connectionResult);
       

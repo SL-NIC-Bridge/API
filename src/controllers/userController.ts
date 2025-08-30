@@ -8,8 +8,8 @@ import {
   UserListResponseDto, 
   SingleUserResponseDto 
 } from '../types/dto';
-import * as bcrypt from 'bcryptjs';
-import { UserCurrentStatus } from '@prisma/client';
+// import * as bcrypt from 'bcryptjs';
+import { UserCurrentStatus, UserRole } from '@prisma/client';
 
 export class UserController extends BaseController {
     static getPendingRegistrations(getPendingRegistrations: any): import("express-serve-static-core").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>> {
@@ -81,7 +81,7 @@ export class UserController extends BaseController {
 static createUser = async (req: Request, res: Response): Promise<Response<SingleUserResponseDto>> => {
   const userData: CreateUserDto = req.body;
 
-  UserController.validateRequiredFields(req.body, ['email', 'password']);
+  UserController.validateRequiredFields(req.body, ['email', 'passwordHash']);
 
   // Check if user already exists
   const existingUser = await UserController.userRepository.findByEmail(userData.email);
@@ -89,8 +89,8 @@ static createUser = async (req: Request, res: Response): Promise<Response<Single
     throw new Error('User with this email already exists');
   }
 
-  // Hash the password
-  const passwordHash = await bcrypt.hash(userData.password, 10);
+  // // Hash the password
+  // const passwordHash = await bcrypt.hash(userData.password, 10);
 
   // Map DTO to Prisma UserCreateInput
   const createInput = {
@@ -98,10 +98,10 @@ static createUser = async (req: Request, res: Response): Promise<Response<Single
     lastName: userData.lastName,
     email: userData.email,
     phone: userData.phone,
-    passwordHash, // required by Prisma
+    passwordHash: userData.passwordHash, // required by Prisma
     role: userData.role ?? 'STANDARD', // default role
     divisionId: userData.divisionId ?? null,
-    currentStatus: UserCurrentStatus.ACTIVE, // default status
+    currentStatus: userData.role === UserRole.GN ? UserCurrentStatus.PENDING_APPROVAL : UserCurrentStatus.ACTIVE, // default status
   };
 
   // Create user in database

@@ -37,6 +37,7 @@ router.use(authenticateToken);
 // Public user routes
 router.get('/', asyncHandler(UserController.getAllUsers));
 router.get('/:id', asyncHandler(UserController.getUserById));
+router.post('/',  asyncHandler(UserController.createUser));
 
 // GN management routes (DS only)
 router.get('/gn/pending', requireAdmin, asyncHandler(UserController.getPendingRegistrations));
@@ -46,7 +47,7 @@ router.put('/gn/:id', requireAdmin, asyncHandler(UserController.updateGN));
 router.post('/gn/:id/reset-password', requireAdmin, asyncHandler(UserController.resetPassword));
 
 // User CRUD (admin only)
-router.post('/', requireAdmin, asyncHandler(UserController.createUser));
+
 router.put('/:id', requireAdmin, asyncHandler(UserController.updateUser));
 
 export default router;

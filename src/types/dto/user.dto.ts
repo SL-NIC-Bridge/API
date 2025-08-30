@@ -1,65 +1,32 @@
-// import { UserRole } from "@prisma/client";
-
-// // Base user interface
-// export interface IUser {
-//   id: string;
-//   email: string;
-//   firstName: string;
-//   lastName: string;
-//   role: UserRole;
-//   createdAt: Date;
-//   updatedAt: Date;
-// }
-
-// // Create user request DTO
-// export interface CreateUserDto {
-//   email: string;
-//   firstName: string;
-//   lastName: string;
-//   password: string;
-//   role: UserRole;
-// }
-
-// // Update user request DTO
-// export interface UpdateUserDto {
-//   email?: string;
-//   firstName?: string;
-//   lastName?: string;
-// }
-
-// // User response DTO (excludes password)
-// export interface UserResponseDto {
-//   id: string;
-//   email: string;
-//   firstName: string;
-//   lastName: string;
-//   role: UserRole;
-//   createdAt: Date;
-//   updatedAt: Date;
-// }
-
-// // User list response DTO
-// export type UserListResponseDto = {
-//   success: true;
-//   data: UserResponseDto[];
-// };
-
-// // Single user response DTO
-// export type SingleUserResponseDto = {
-//   success: true;
-//   data: UserResponseDto;
-// };
 
 import { UserRole, UserCurrentStatus } from "@prisma/client";
 
+
 export interface CreateUserDto {
+  email: string;
+  firstName: string;
+  lastName: string;
+  passwordHash: string;
+  phone: string;
+  // currentStatus: 'ACTIVE' | 'PENDING_APPROVAL' | 'REJECTED' | 'DEACTIVATED';
+  role: UserRole;
+  additionalData?: {
+    nic?: string;
+    [key: string]: any;
+  };
+  gnDivisionId?: string;
+  divisionId?: string;
+}
+
+export interface CreateGNRegistrationDto {
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
   password: string;
-  role?: UserRole;
-  divisionId?: string;
+  nic: string;
+  divisionId: string;
+  signatureDataUrl: string; // Base64 signature data
 }
 
 export interface UpdateUserDto {
@@ -69,6 +36,10 @@ export interface UpdateUserDto {
   role?: UserRole;
   divisionId?: string;
   currentStatus?: UserCurrentStatus;
+  additionalData?: {
+    nic?: string;
+    [key: string]: any;
+  };
 }
 
 export interface UserResponseDto {
@@ -80,15 +51,22 @@ export interface UserResponseDto {
   role: UserRole;
   currentStatus: UserCurrentStatus;
   divisionId?: string | undefined;
+  additionalData?: {
+    nic?: string;
+    [key: string]: any;
+  };
   createdAt: Date;
   updatedAt: Date;
-  division?:
-    | {
-        id: string;
-        name: string;
-        code: number;
-      }
-    | undefined;
+  division?: {
+    id: string;
+    name: string;
+    code: string;
+  };
+  signatureAttachment?: {
+    id: string;
+    fileUrl: string;
+    fileName: string;
+  };
 }
 
 export interface UserListResponseDto {
@@ -108,7 +86,22 @@ export interface PendingRegistrationDto {
   email: string;
   phone: string;
   role: UserRole;
+  additionalData?: {
+    nic?: string;
+    [key: string]: any;
+  };
+  divisionId?: string;
   createdAt: Date;
+  division?: {
+    id: string;
+    name: string;
+    code: string;
+  };
+  signatureAttachment?: {
+    id: string;
+    fileUrl: string;
+    fileName: string;
+  };
 }
 
 export interface ApproveRegistrationDto {

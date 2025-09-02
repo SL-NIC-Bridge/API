@@ -1,27 +1,31 @@
 // import { Router } from 'express';
-// import { UserController } from '../controllers';
-// import { validate } from '../middleware/validation';
-// import { createUserSchema, updateUserSchema, userIdSchema } from '../validation';
+// import { UserController } from '../controllers/userController';
+// import { asyncHandler } from '../middleware/errorHandler';
+// import { authenticateToken } from '../middleware/auth';
+// import { requireAdmin, requireGNOrAdmin } from '../middleware/roleGuard';
 
 // const router = Router();
 
-// // Get all users
-// router.get('/', UserController.getAllUsers);
+// // All routes require authentication
+// router.use(authenticateToken);
 
-// // Get user by ID
-// router.get('/:id', validate({ params: userIdSchema }), UserController.getUserById);
+// // Public user routes
+// router.get('/', asyncHandler(UserController.getAllUsers));
+// router.get('/:id', asyncHandler(UserController.getUserById));
+// router.post('/',  asyncHandler(UserController.createUser));
 
-// // Create new user
-// router.post('/', validate({ body: createUserSchema }), UserController.createUser);
+// // GN management routes (DS only)
+// router.get('/gn/pending', requireAdmin, asyncHandler(UserController.getPendingRegistrations));
+// router.post('/gn/:id/approve', requireAdmin, asyncHandler(UserController.approveRegistration));
+// router.get('/gn/all', requireGNOrAdmin, asyncHandler(UserController.getAllGNs));
+// router.put('/gn/:id', requireAdmin, asyncHandler(UserController.updateGN));
+// router.post('/gn/:id/reset-password', requireAdmin, asyncHandler(UserController.resetPassword));
 
-// // Update user
-// router.put('/:id', validate({ params: userIdSchema, body: updateUserSchema }), UserController.updateUser);
+// // User CRUD (admin only)
 
-// // Delete user
-// router.delete('/:id', validate({ params: userIdSchema }), UserController.deleteUser);
+// router.put('/:id', requireAdmin, asyncHandler(UserController.updateUser));
 
-// export default router; 
-
+// export default router;
 
 import { Router } from 'express';
 import { UserController } from '../controllers/userController';
@@ -31,13 +35,15 @@ import { requireAdmin, requireGNOrAdmin } from '../middleware/roleGuard';
 
 const router = Router();
 
+router.post('/',  asyncHandler(UserController.createUser));
+
 // All routes require authentication
 router.use(authenticateToken);
 
 // Public user routes
 router.get('/', asyncHandler(UserController.getAllUsers));
 router.get('/:id', asyncHandler(UserController.getUserById));
-router.post('/',  asyncHandler(UserController.createUser));
+
 
 // GN management routes (DS only)
 router.get('/gn/pending', requireAdmin, asyncHandler(UserController.getPendingRegistrations));

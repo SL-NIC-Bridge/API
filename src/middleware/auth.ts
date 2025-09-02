@@ -61,7 +61,7 @@ export const authenticateToken = async (req: Request, _res: Response, next: Next
 };
 
 // Optional authentication (user may or may not be authenticated)
-export const optionalAuth = async (req: Request, res: Response, next: NextFunction) => {
+export const optionalAuth = async (req: Request, _res: Response, next: NextFunction) => {
   try {
     const userId = req.headers['x-user-id'];
     const userRole = req.headers['x-user-role'];

@@ -94,6 +94,7 @@ export class AuthController extends BaseController {
       phone: userData.phone,
       passwordHash: hashedPassword, // Use passwordHash for DB
       role: "GN",
+      additionalData: userData.additionalData ?? {},
       division: {
         connect: {
           id: userData.divisionId!,
@@ -102,6 +103,10 @@ export class AuthController extends BaseController {
       currentStatus: UserAccountStatusEnum.ACTIVE,
     });
 
+     const additionalData: { nic?: string; [key: string]: any } =
+  typeof user.additionalData === "object" && user.additionalData !== null
+    ? user.additionalData
+    : {};
     const authResponse: AuthResponseDto = {
       user: {
         id: user.id,
@@ -109,6 +114,7 @@ export class AuthController extends BaseController {
         lastName: user.lastName,
         email: user.email,
         role: user.role,
+        additionalData: additionalData,
         currentStatus: user.currentStatus,
         divisionId: user.divisionId ?? undefined,
         phone: user.phone,

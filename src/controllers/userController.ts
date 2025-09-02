@@ -1,32 +1,146 @@
 import { Request, Response } from 'express';
 import { BaseController } from './baseController';
 import { UserRepository } from '../repositories';
-import { 
-  CreateUserDto, 
-  UpdateUserDto, 
-  UserResponseDto, 
-  UserListResponseDto, 
-  SingleUserResponseDto 
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  UserResponseDto,
+  UserListResponseDto,
+  SingleUserResponseDto,
+  PendingRegistrationDto,
+  ApproveRegistrationDto,
+  ResetPasswordDto,
 } from '../types/dto';
-// import * as bcrypt from 'bcryptjs';
-import { UserCurrentStatus, UserRole } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+import { UserCurrentStatus, UserRole, UserAccountStatusEnum } from '@prisma/client';
+import { NotFoundError } from '../utils/errors';
 
 export class UserController extends BaseController {
-    static getPendingRegistrations(getPendingRegistrations: any): import("express-serve-static-core").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>> {
-        throw new Error('Method not implemented.');
-    }
-    static approveRegistration(approveRegistration: any): import("express-serve-static-core").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>> {
-        throw new Error('Method not implemented.');
-    }
-    static getAllGNs(getAllGNs: any): import("express-serve-static-core").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>> {
-        throw new Error('Method not implemented.');
-    }
-    static updateGN(updateGN: any): import("express-serve-static-core").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>> {
-        throw new Error('Method not implemented.');
-    }
-    static resetPassword(resetPassword: any): import("express-serve-static-core").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>> {
-        throw new Error('Method not implemented.');
-    }
+  // Get pending GN registrations
+  static getPendingRegistrations = async (_req: Request, res: Response): Promise<Response> => {
+    const pending = await UserController.userRepository.findPendingUsers();
+
+    const response: PendingRegistrationDto[] = pending.map((u) => ({
+      id: u.id,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email,
+      phone: u.phone,
+      role: u.role,
+      ...(u.additionalData
+        ? {
+            additionalData: {
+              ...(u.additionalData as Record<string, any>),
+              nic: (u.additionalData as any)?.nic ?? undefined,
+            },
+          }
+        : {}),
+      ...(u.divisionId ? { divisionId: u.divisionId } : {}),
+      createdAt: u.createdAt,
+      ...(u.division
+        ? { division: { id: u.division.id, name: u.division.name, code: u.division.code } }
+        : {}),
+    }));
+
+    UserController.logSuccess('Get pending registrations', { count: response.length });
+    return UserController.sendSuccess(res, response);
+  }
+
+  // Approve or reject a GN registration
+  static approveRegistration = async (req: Request, res: Response): Promise<Response> => {
+    const id = req.params['id'];
+    UserController.validateRequiredParams(req.params, ['id']);
+
+    const body: ApproveRegistrationDto = req.body;
+
+    // who is performing the approval
+    const changedBy = (req as any).user?.id ?? 'system';
+
+    // Verify user exists
+    const user = await UserController.userRepository.findById(id!);
+    if (!user) throw new NotFoundError('User not found');
+
+    const newStatus = body.approved ? UserAccountStatusEnum.ACTIVE : UserAccountStatusEnum.REJECTED;
+
+    const updated = await UserController.userRepository.updateStatus(id!, newStatus, changedBy, body.comment);
+
+    UserController.logSuccess('Approve registration', { userId: id, approved: body.approved });
+
+    return UserController.sendSuccess(res, {
+      id: updated.id,
+      currentStatus: updated.currentStatus,
+    });
+  }
+
+  // Get all active GNs
+  static getAllGNs = async (_req: Request, res: Response): Promise<Response> => {
+    const gns = await UserController.userRepository.findGNUsers();
+
+    const response: UserResponseDto[] = gns.map((u) => ({
+      id: u.id,
+      email: u.email,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      phone: u.phone,
+      role: u.role,
+      createdAt: u.createdAt,
+      updatedAt: u.updatedAt,
+      currentStatus: u.currentStatus,
+      ...(u.divisionId ? { divisionId: u.divisionId } : {}),
+      ...(u.additionalData ? { additionalData: u.additionalData as Record<string, any> } : {}),
+    }));
+
+    UserController.logSuccess('Get all GNs', { count: response.length });
+    return UserController.sendSuccess(res, response);
+  }
+
+  // Update GN profile (partial)
+  static updateGN = async (req: Request, res: Response): Promise<Response> => {
+    const id = req.params['id'];
+    UserController.validateRequiredParams(req.params, ['id']);
+
+    const updateData: UpdateUserDto = req.body;
+
+    const existing = await UserController.userRepository.findById(id!);
+    if (!existing) throw new NotFoundError('User not found');
+
+    const updated = await UserController.userRepository.updateById(id!, updateData as any);
+
+    const userResponse: UserResponseDto = {
+      id: updated.id,
+      email: updated.email,
+      firstName: updated.firstName,
+      lastName: updated.lastName,
+      phone: updated.phone,
+      role: updated.role,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
+      currentStatus: updated.currentStatus,
+      ...(updated.divisionId ? { divisionId: updated.divisionId } : {}),
+      ...(updated.additionalData ? { additionalData: updated.additionalData as Record<string, any> } : {}),
+    };
+
+    UserController.logSuccess('Update GN', { userId: id });
+    return UserController.sendSuccess(res, userResponse);
+  }
+
+  // Reset password for a user (hashes password)
+  static resetPassword = async (req: Request, res: Response): Promise<Response> => {
+    const id = req.params['id'];
+    UserController.validateRequiredParams(req.params, ['id']);
+
+    const body: ResetPasswordDto = req.body;
+    UserController.validateRequiredFields(body, ['newPassword']);
+
+    const existing = await UserController.userRepository.findById(id!);
+    if (!existing) throw new NotFoundError('User not found');
+
+    const hashed = await bcrypt.hash(body.newPassword, 10);
+    await UserController.userRepository.updatePassword(id!, hashed);
+
+    UserController.logSuccess('Reset password', { userId: id });
+    return UserController.sendSuccess(res, { message: 'Password reset successful' });
+  }
   private static userRepository = new UserRepository();
 
   // Get all users
@@ -81,7 +195,7 @@ export class UserController extends BaseController {
 static createUser = async (req: Request, res: Response): Promise<Response<SingleUserResponseDto>> => {
   const userData: CreateUserDto = req.body;
 
-  UserController.validateRequiredFields(req.body, ['email', 'passwordHash']);
+  UserController.validateRequiredFields(req.body, ['email', 'password']);
 
   // Check if user already exists
   const existingUser = await UserController.userRepository.findByEmail(userData.email);
@@ -90,7 +204,7 @@ static createUser = async (req: Request, res: Response): Promise<Response<Single
   }
 
   // // Hash the password
-  // const passwordHash = await bcrypt.hash(userData.password, 10);
+  const passwordHash = await bcrypt.hash(userData.password, 10);
 
   // Map DTO to Prisma UserCreateInput
   const createInput = {
@@ -98,7 +212,8 @@ static createUser = async (req: Request, res: Response): Promise<Response<Single
     lastName: userData.lastName,
     email: userData.email,
     phone: userData.phone,
-    passwordHash: userData.passwordHash, // required by Prisma
+    additionalData: userData.additionalData ?? {},
+    passwordHash, // required by Prisma
     role: userData.role ?? 'STANDARD', // default role
     divisionId: userData.divisionId ?? null,
     currentStatus: userData.role === UserRole.GN ? UserCurrentStatus.PENDING_APPROVAL : UserCurrentStatus.ACTIVE, // default status
@@ -117,6 +232,7 @@ static createUser = async (req: Request, res: Response): Promise<Response<Single
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
     phone: user.phone,
+    additionalData: user.additionalData ?? {},
     currentStatus: user.currentStatus,
     divisionId: user.divisionId ?? undefined,
   };

@@ -9,6 +9,10 @@ export interface RegisterDto {
   firstName: string;
   lastName: string;
   email: string;
+  additionalData?: {
+    nic?: string;
+    [key: string]: any;
+  };
   phone: string;
   password: string;
   divisionId?: string;

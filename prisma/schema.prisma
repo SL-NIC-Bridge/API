@@ -92,13 +92,13 @@ model UserAccountStatus {
   id              String                   @id @default(cuid())
   userId          String                   @map("user_id")
   status          UserAccountStatusEnum
-  changedByUserId String                   @map("changed_by_user_id")
+  changedByUserId String?                   @map("changed_by_user_id")
   comment         String?
   createdAt       DateTime                 @default(now()) @map("created_at")
 
   // Relations
   user      User @relation("UserStatus", fields: [userId], references: [id])
-  changedBy User @relation("ChangedBy", fields: [changedByUserId], references: [id])
+  changedBy User? @relation("ChangedBy", fields: [changedByUserId], references: [id])
 
   @@map("user_account_statuses")
 }

@@ -1,6 +1,6 @@
-import { Request, Response } from 'express';
-import { BaseController } from './baseController';
-import { UserRepository } from '../repositories';
+import { Request, Response } from "express";
+import { BaseController } from "./baseController";
+import { UserRepository } from "../repositories";
 import {
   CreateUserDto,
   UpdateUserDto,
@@ -10,14 +10,21 @@ import {
   PendingRegistrationDto,
   ApproveRegistrationDto,
   ResetPasswordDto,
-} from '../types/dto';
-import bcrypt from 'bcryptjs';
-import { UserCurrentStatus, UserRole, UserAccountStatusEnum } from '@prisma/client';
-import { NotFoundError } from '../utils/errors';
+} from "../types/dto";
+import bcrypt from "bcryptjs";
+import {
+  UserCurrentStatus,
+  UserRole,
+  UserAccountStatusEnum,
+} from "@prisma/client";
+import { NotFoundError } from "../utils/errors";
 
 export class UserController extends BaseController {
   // Get pending GN registrations
-  static getPendingRegistrations = async (_req: Request, res: Response): Promise<Response> => {
+  static getPendingRegistrations = async (
+    _req: Request,
+    res: Response
+  ): Promise<Response> => {
     const pending = await UserController.userRepository.findPendingUsers();
 
     const response: PendingRegistrationDto[] = pending.map((u) => ({
@@ -26,6 +33,7 @@ export class UserController extends BaseController {
       lastName: u.lastName,
       email: u.email,
       phone: u.phone,
+      currentStatus: u.currentStatus,
       role: u.role,
       ...(u.additionalData
         ? {
@@ -38,42 +46,142 @@ export class UserController extends BaseController {
       ...(u.divisionId ? { divisionId: u.divisionId } : {}),
       createdAt: u.createdAt,
       ...(u.division
-        ? { division: { id: u.division.id, name: u.division.name, code: u.division.code } }
+        ? {
+            division: {
+              id: u.division.id,
+              name: u.division.name,
+              code: u.division.code,
+            },
+          }
         : {}),
     }));
 
-    UserController.logSuccess('Get pending registrations', { count: response.length });
+    UserController.logSuccess("Get pending registrations", {
+      count: response.length,
+    });
     return UserController.sendSuccess(res, response);
-  }
+  };
 
   // Approve or reject a GN registration
-  static approveRegistration = async (req: Request, res: Response): Promise<Response> => {
-    const id = req.params['id'];
-    UserController.validateRequiredParams(req.params, ['id']);
+  static approveRegistration = async (
+    req: Request,
+    res: Response
+  ): Promise<Response> => {
+    const id = req.params["id"];
+    UserController.validateRequiredParams(req.params, ["id"]);
 
     const body: ApproveRegistrationDto = req.body;
 
-    // who is performing the approval
-    const changedBy = (req as any).user?.id ?? 'system';
+    // Get the user performing the approval, or null if not authenticated
+    const changedBy = (req as any).user?.id ?? null;
 
     // Verify user exists
     const user = await UserController.userRepository.findById(id!);
-    if (!user) throw new NotFoundError('User not found');
+    if (!user) throw new NotFoundError("User not found");
 
-    const newStatus = body.approved ? UserAccountStatusEnum.ACTIVE : UserAccountStatusEnum.REJECTED;
+    const newStatus = body.approved
+      ? UserAccountStatusEnum.ACTIVE
+      : UserAccountStatusEnum.REJECTED;
 
-    const updated = await UserController.userRepository.updateStatus(id!, newStatus, changedBy, body.comment);
+    const updated = await UserController.userRepository.updateStatus(
+      id!,
+      newStatus,
+      changedBy,
+      body.comment
+    );
 
-    UserController.logSuccess('Approve registration', { userId: id, approved: body.approved });
+    UserController.logSuccess("Approve registration", {
+      userId: id,
+      approved: body.approved,
+    });
 
     return UserController.sendSuccess(res, {
       id: updated.id,
       currentStatus: updated.currentStatus,
     });
-  }
+  };
+
+  
+  static updateStatus = async (req: Request, res: Response) => {
+    const id = req.params["id"];
+    UserController.validateRequiredParams(req.params, ["id"]);
+
+    // const body: UpdateUserDto = req.body;
+    const body: UpdateUserDto = {
+      currentStatus: req.body.currentStatus || req.body.status, // fallback to status
+      comment: req.body.comment,
+    };
+
+    // Validate the status is provided and is valid
+    if (!body.currentStatus) {
+      throw new NotFoundError("Status is required");
+    }
+
+    // Validate that the status is one of the allowed values
+    const allowedStatuses = Object.values(UserAccountStatusEnum);
+    if (!allowedStatuses.includes(body.currentStatus)) {
+      throw new NotFoundError(
+        `Invalid status. Must be one of: ${allowedStatuses.join(", ")}`
+      );
+    }
+
+    // Get the user performing the status update, or null if not authenticated
+    const changedBy = (req as any).user?.id ?? null;
+
+    console.log(
+      "Updating status for user:",
+      id,
+      "to",
+      body.currentStatus,
+      "by",
+      changedBy
+    );
+
+    // Verify user exists
+    const user = await UserController.userRepository.findById(id!);
+    if (!user) throw new NotFoundError("User not found");
+
+    // Optional
+    // For example, prevent changing status if user is not a GN
+    if (user.role !== UserRole.GN) {
+      throw new NotFoundError("Status can only be updated for GN users");
+    }
+
+    // Optional
+    // For example, once rejected, maybe only allow reactivation by admin
+    if (
+      user.currentStatus === UserAccountStatusEnum.REJECTED &&
+      body.currentStatus !== UserAccountStatusEnum.PENDING_APPROVAL &&
+      body.currentStatus !== UserAccountStatusEnum.ACTIVE
+    ) {
+      throw new NotFoundError("Invalid status transition from REJECTED");
+    }
+
+    const updated = await UserController.userRepository.updateStatus(
+      id!,
+      body.currentStatus,
+      changedBy,
+      body.comment
+    );
+
+    UserController.logSuccess("Update user status", {
+      userId: id,
+      oldStatus: user.currentStatus,
+      newStatus: body.currentStatus,
+    });
+
+    return UserController.sendSuccess(res, {
+      id: updated.id,
+      currentStatus: updated.currentStatus,
+      message: `User status updated to ${body.currentStatus}`,
+    });
+  };
 
   // Get all active GNs
-  static getAllGNs = async (_req: Request, res: Response): Promise<Response> => {
+  static getAllGNs = async (
+    _req: Request,
+    res: Response
+  ): Promise<Response> => {
     const gns = await UserController.userRepository.findGNUsers();
 
     const response: UserResponseDto[] = gns.map((u) => ({
@@ -87,24 +195,29 @@ export class UserController extends BaseController {
       updatedAt: u.updatedAt,
       currentStatus: u.currentStatus,
       ...(u.divisionId ? { divisionId: u.divisionId } : {}),
-      ...(u.additionalData ? { additionalData: u.additionalData as Record<string, any> } : {}),
+      ...(u.additionalData
+        ? { additionalData: u.additionalData as Record<string, any> }
+        : {}),
     }));
 
-    UserController.logSuccess('Get all GNs', { count: response.length });
+    UserController.logSuccess("Get all GNs", { count: response.length });
     return UserController.sendSuccess(res, response);
-  }
+  };
 
   // Update GN profile (partial)
   static updateGN = async (req: Request, res: Response): Promise<Response> => {
-    const id = req.params['id'];
-    UserController.validateRequiredParams(req.params, ['id']);
+    const id = req.params["id"];
+    UserController.validateRequiredParams(req.params, ["id"]);
 
     const updateData: UpdateUserDto = req.body;
 
     const existing = await UserController.userRepository.findById(id!);
-    if (!existing) throw new NotFoundError('User not found');
+    if (!existing) throw new NotFoundError("User not found");
 
-    const updated = await UserController.userRepository.updateById(id!, updateData as any);
+    const updated = await UserController.userRepository.updateById(
+      id!,
+      updateData as any
+    );
 
     const userResponse: UserResponseDto = {
       id: updated.id,
@@ -117,37 +230,47 @@ export class UserController extends BaseController {
       updatedAt: updated.updatedAt,
       currentStatus: updated.currentStatus,
       ...(updated.divisionId ? { divisionId: updated.divisionId } : {}),
-      ...(updated.additionalData ? { additionalData: updated.additionalData as Record<string, any> } : {}),
+      ...(updated.additionalData
+        ? { additionalData: updated.additionalData as Record<string, any> }
+        : {}),
     };
 
-    UserController.logSuccess('Update GN', { userId: id });
+    UserController.logSuccess("Update GN", { userId: id });
     return UserController.sendSuccess(res, userResponse);
-  }
+  };
 
   // Reset password for a user (hashes password)
-  static resetPassword = async (req: Request, res: Response): Promise<Response> => {
-    const id = req.params['id'];
-    UserController.validateRequiredParams(req.params, ['id']);
+  static resetPassword = async (
+    req: Request,
+    res: Response
+  ): Promise<Response> => {
+    const id = req.params["id"];
+    UserController.validateRequiredParams(req.params, ["id"]);
 
     const body: ResetPasswordDto = req.body;
-    UserController.validateRequiredFields(body, ['newPassword']);
+    UserController.validateRequiredFields(body, ["newPassword"]);
 
     const existing = await UserController.userRepository.findById(id!);
-    if (!existing) throw new NotFoundError('User not found');
+    if (!existing) throw new NotFoundError("User not found");
 
     const hashed = await bcrypt.hash(body.newPassword, 10);
     await UserController.userRepository.updatePassword(id!, hashed);
 
-    UserController.logSuccess('Reset password', { userId: id });
-    return UserController.sendSuccess(res, { message: 'Password reset successful' });
-  }
+    UserController.logSuccess("Reset password", { userId: id });
+    return UserController.sendSuccess(res, {
+      message: "Password reset successful",
+    });
+  };
   private static userRepository = new UserRepository();
 
   // Get all users
-  static getAllUsers = async (_req: Request, res: Response): Promise<Response<UserListResponseDto>> => {
+  static getAllUsers = async (
+    _req: Request,
+    res: Response
+  ): Promise<Response<UserListResponseDto>> => {
     const users = await UserController.userRepository.findAll();
 
-    const userResponses: UserResponseDto[] = users.map(user => ({
+    const userResponses: UserResponseDto[] = users.map((user) => ({
       id: user.id,
       email: user.email,
       firstName: user.firstName,
@@ -156,23 +279,29 @@ export class UserController extends BaseController {
       role: user.role,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-      currentStatus: 'ACTIVE'
+      currentStatus: "ACTIVE",
     }));
 
-    UserController.logSuccess('Get all users', { count: userResponses.length });
-    return UserController.sendSuccess(res, userResponses) as Response<UserListResponseDto>;
-  }
+    UserController.logSuccess("Get all users", { count: userResponses.length });
+    return UserController.sendSuccess(
+      res,
+      userResponses
+    ) as Response<UserListResponseDto>;
+  };
 
   // Get user by ID
-  static getUserById = async (req: Request, res: Response): Promise<Response<SingleUserResponseDto>> => {
+  static getUserById = async (
+    req: Request,
+    res: Response
+  ): Promise<Response<SingleUserResponseDto>> => {
     const { id } = req.params;
-    
-    UserController.validateRequiredParams(req.params, ['id']);
-    
+
+    UserController.validateRequiredParams(req.params, ["id"]);
+
     const user = await UserController.userRepository.findById(id!);
 
     if (!user) {
-      throw new Error('User not found');
+      throw new Error("User not found");
     }
 
     const userResponse: UserResponseDto = {
@@ -184,71 +313,95 @@ export class UserController extends BaseController {
       role: user.role,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-      currentStatus: user.currentStatus
+      currentStatus: user.currentStatus,
     };
 
-    UserController.logSuccess('Get user by ID', { userId: id });
-    return UserController.sendSuccess(res, userResponse) as Response<SingleUserResponseDto>;
-  }
+    UserController.logSuccess("Get user by ID", { userId: id });
+    return UserController.sendSuccess(
+      res,
+      userResponse
+    ) as Response<SingleUserResponseDto>;
+  };
 
   // Create new user
-static createUser = async (req: Request, res: Response): Promise<Response<SingleUserResponseDto>> => {
-  const userData: CreateUserDto = req.body;
+  static createUser = async (
+    req: Request,
+    res: Response
+  ): Promise<Response<SingleUserResponseDto>> => {
+    const userData: CreateUserDto = req.body;
 
-  UserController.validateRequiredFields(req.body, ['email', 'password']);
+    UserController.validateRequiredFields(req.body, ["email", "password"]);
 
-  // Check if user already exists
-  const existingUser = await UserController.userRepository.findByEmail(userData.email);
-  if (existingUser) {
-    throw new Error('User with this email already exists');
-  }
+    // Check if user already exists
+    const existingUser = await UserController.userRepository.findByEmail(
+      userData.email
+    );
+    if (existingUser) {
+      throw new Error("User with this email already exists");
+    }
 
-  // // Hash the password
-  const passwordHash = await bcrypt.hash(userData.password, 10);
+    // // Hash the password
+    const passwordHash = await bcrypt.hash(userData.password, 10);
 
-  // Map DTO to Prisma UserCreateInput
-  const createInput = {
-    firstName: userData.firstName,
-    lastName: userData.lastName,
-    email: userData.email,
-    phone: userData.phone,
-    additionalData: userData.additionalData ?? {},
-    passwordHash, // required by Prisma
-    role: userData.role ?? 'STANDARD', // default role
-    divisionId: userData.divisionId ?? null,
-    currentStatus: userData.role === UserRole.GN ? UserCurrentStatus.PENDING_APPROVAL : UserCurrentStatus.ACTIVE, // default status
+    // Map DTO to Prisma UserCreateInput
+    const createInput = {
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      email: userData.email,
+      phone: userData.phone,
+      additionalData: userData.additionalData ?? {},
+      passwordHash, // required by Prisma
+      role: userData.role ?? "STANDARD", // default role
+      divisionId: userData.divisionId ?? null,
+      currentStatus:
+        userData.role === UserRole.GN
+          ? UserCurrentStatus.PENDING_APPROVAL
+          : UserCurrentStatus.ACTIVE, // default status
+    };
+
+    // Create user in database
+    const user = await UserController.userRepository.create(createInput);
+
+    // Map to response DTO
+    const userResponse: UserResponseDto = {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      phone: user.phone,
+      additionalData: user.additionalData ?? {},
+      currentStatus: user.currentStatus,
+      divisionId: user.divisionId ?? undefined,
+    };
+
+    UserController.logSuccess("Create user", {
+      userId: user.id,
+      email: userData.email,
+    });
+    return UserController.sendSuccess(
+      res,
+      userResponse,
+      201
+    ) as Response<SingleUserResponseDto>;
   };
-
-  // Create user in database
-  const user = await UserController.userRepository.create(createInput);
-
-  // Map to response DTO
-  const userResponse: UserResponseDto = {
-    id: user.id,
-    email: user.email,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    role: user.role,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
-    phone: user.phone,
-    additionalData: user.additionalData ?? {},
-    currentStatus: user.currentStatus,
-    divisionId: user.divisionId ?? undefined,
-  };
-
-  UserController.logSuccess('Create user', { userId: user.id, email: userData.email });
-  return UserController.sendSuccess(res, userResponse, 201) as Response<SingleUserResponseDto>;
-};
 
   // Update user
-  static updateUser = async (req: Request, res: Response): Promise<Response<SingleUserResponseDto>> => {
+  static updateUser = async (
+    req: Request,
+    res: Response
+  ): Promise<Response<SingleUserResponseDto>> => {
     const { id } = req.params;
     const updateData: UpdateUserDto = req.body;
 
-    UserController.validateRequiredParams(req.params, ['id']);
+    UserController.validateRequiredParams(req.params, ["id"]);
 
-    const user = await UserController.userRepository.updateById(id!, updateData);
+    const user = await UserController.userRepository.updateById(
+      id!,
+      updateData
+    );
 
     const userResponse: UserResponseDto = {
       id: user.id,
@@ -259,22 +412,28 @@ static createUser = async (req: Request, res: Response): Promise<Response<Single
       role: user.role,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-      currentStatus: 'ACTIVE'
+      currentStatus: "ACTIVE",
     };
 
-    UserController.logSuccess('Update user', { userId: id });
-    return UserController.sendSuccess(res, userResponse) as Response<SingleUserResponseDto>;
-  }
+    UserController.logSuccess("Update user", { userId: id });
+    return UserController.sendSuccess(
+      res,
+      userResponse
+    ) as Response<SingleUserResponseDto>;
+  };
 
   // Delete user
-  static deleteUser = async (req: Request, res: Response): Promise<Response> => {
+  static deleteUser = async (
+    req: Request,
+    res: Response
+  ): Promise<Response> => {
     const { id } = req.params;
 
-    UserController.validateRequiredParams(req.params, ['id']);
+    UserController.validateRequiredParams(req.params, ["id"]);
 
     await UserController.userRepository.deleteById(id!);
 
-    UserController.logSuccess('Delete user', { userId: id });
+    UserController.logSuccess("Delete user", { userId: id });
     return res.status(204).send();
-  }
-} 
+  };
+}

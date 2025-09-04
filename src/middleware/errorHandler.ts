@@ -63,7 +63,7 @@ export const errorHandler = (
   error: Error,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): Response => {
   logger.error('Error occurred:', {
     message: error.message,

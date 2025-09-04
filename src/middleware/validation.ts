@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
-import { createError } from './errorHandler';
+import { ValidationError } from '../utils/errors';
 
 export interface ValidationSchema {
   body?: Joi.ObjectSchema;
@@ -38,8 +38,7 @@ export const validate = (schema: ValidationSchema) => {
 
     // If there are validation errors, return them
     if (validationErrors.length > 0) {
-      const error = createError('Validation failed', 400);
-      (error as any).details = validationErrors;
+      const error = new ValidationError('Validation failed', validationErrors.join(', '));
       return next(error);
     }
 

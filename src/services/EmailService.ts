@@ -488,7 +488,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 import { $Enums } from '@prisma/client';
-import { ApplicationCurrentStatus } from '@prisma/client';
 
 interface EmailTemplate {
   subject: string;

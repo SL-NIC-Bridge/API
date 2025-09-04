@@ -1,12 +1,12 @@
 
-import { UserRole, UserCurrentStatus } from "@prisma/client";
+import { UserRole, UserCurrentStatus, UserAccountStatusEnum } from "@prisma/client";
 
 
 export interface CreateUserDto {
   email: string;
   firstName: string;
   lastName: string;
-  passwordHash: string;
+  password: string;
   phone: string;
   // currentStatus: 'ACTIVE' | 'PENDING_APPROVAL' | 'REJECTED' | 'DEACTIVATED';
   role: UserRole;
@@ -40,6 +40,7 @@ export interface UpdateUserDto {
     nic?: string;
     [key: string]: any;
   };
+  comment?: string; // Optional comment for status changes
 }
 
 export interface UserResponseDto {
@@ -49,6 +50,7 @@ export interface UserResponseDto {
   email: string;
   phone: string;
   role: UserRole;
+  statusTimeline?: UserAccountStatusResponseDto[];
   currentStatus: UserCurrentStatus;
   divisionId?: string | undefined;
   additionalData?: {
@@ -67,6 +69,19 @@ export interface UserResponseDto {
     fileUrl: string;
     fileName: string;
   };
+}
+
+export interface UserAccountStatusResponseDto {
+  status: UserAccountStatusEnum;
+  createdAt: Date;
+  changedBy?: {
+    
+    firstName: string;  
+    lastName: string;
+    email: string;
+  } | null;
+  comment?: string | null;
+
 }
 
 export interface UserListResponseDto {

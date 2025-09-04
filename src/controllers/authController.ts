@@ -11,6 +11,7 @@ import {
 import { UserResponseDto } from "../types/dto/user.dto";
 import { UnauthorizedError, ConflictError } from "../utils/errors";
 import { UserAccountStatusEnum } from "@prisma/client";
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
 
 export class AuthController extends BaseController {
   private static userRepository = new UserRepository();
@@ -38,6 +39,10 @@ export class AuthController extends BaseController {
       throw new UnauthorizedError("Account is not active");
     }
 
+    // generate tokens with userId and email
+    const accessToken = generateAccessToken({ userId: user.id, email: user.email });
+    const refreshToken = generateRefreshToken({ userId: user.id, email: user.email });
+
     const authResponse: AuthResponseDto = {
       user: {
         id: user.id,
@@ -51,8 +56,8 @@ export class AuthController extends BaseController {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
-      accessToken: "temp-token",
-      refreshToken: "temp-refresh-token",
+      accessToken,
+      refreshToken,
     };
 
     AuthController.logSuccess("User login", { userId: user.id, email });
@@ -181,14 +186,17 @@ export class AuthController extends BaseController {
 
     AuthController.validateRequiredFields(req.body, ["refreshToken"]);
 
-    // Placeholder implementation
-    const response = {
-      accessToken: "new-temp-token",
-      refreshToken: "new-temp-refresh-token",
-    };
+    // verify and issue new tokens
+    const payload = verifyRefreshToken(refreshToken);
 
-    AuthController.logSuccess("Token refresh");
-    return AuthController.sendSuccess(res, response);
+    const newAccessToken = generateAccessToken({ userId: payload.userId, email: payload.email });
+    const newRefreshToken = generateRefreshToken({ userId: payload.userId, email: payload.email });
+
+    AuthController.logSuccess("Token refresh", { userId: payload.userId });
+    return AuthController.sendSuccess(res, {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+    });
   };
 
   // -----------------------

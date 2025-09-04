@@ -9,9 +9,10 @@ import {
   RefreshTokenDto,
 } from "../types/dto/auth.dto";
 import { UserResponseDto } from "../types/dto/user.dto";
-import { UnauthorizedError, ConflictError } from "../utils/errors";
+import { UnauthorizedError, ConflictError, ValidationError } from "../utils/errors";
 import { UserAccountStatusEnum } from "@prisma/client";
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
+import { detectClientType, isRoleAllowedForClient } from '../utils/clientDetection';
 
 export class AuthController extends BaseController {
   private static userRepository = new UserRepository();
@@ -20,16 +21,25 @@ export class AuthController extends BaseController {
   // LOGIN
   // -----------------------
   static login = async (req: Request, res: Response): Promise<Response> => {
+    if (!req.body ) {
+      throw new ValidationError("Request body is missing");
+    }
+
     const { email, password }: LoginDto = req.body;
 
     AuthController.validateRequiredFields(req.body, ["email", "password"]);
+
+    // Detect client type from request headers
+    const userAgent = req.headers['user-agent'] || '';
+    const clientTypeHeader = req.headers['x-client-type'] as string || '';
+    const clientType = detectClientType(userAgent, clientTypeHeader);
 
     const user = await AuthController.userRepository.findByEmail(email);
 
     if (!user) {
       throw new UnauthorizedError("Invalid credentials");
     }
-
+    
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
       throw new UnauthorizedError("Invalid credentials");
@@ -39,7 +49,16 @@ export class AuthController extends BaseController {
       throw new UnauthorizedError("Account is not active");
     }
 
-    // generate tokens with userId and email
+    // Check if user role is allowed for this client type
+    if (!isRoleAllowedForClient(user.role, clientType)) {
+      const deviceMessage = clientType === 'mobile' 
+        ? 'Mobile app access is restricted to standard users only'
+        : 'Web access is restricted to DS and GN users only';
+      
+      throw new UnauthorizedError(`Access denied: ${deviceMessage}`);
+    }
+
+    // generate tokens with userId and email (no client type in token)
     const accessToken = generateAccessToken({ userId: user.id, email: user.email });
     const refreshToken = generateRefreshToken({ userId: user.id, email: user.email });
 
@@ -60,7 +79,12 @@ export class AuthController extends BaseController {
       refreshToken,
     };
 
-    AuthController.logSuccess("User login", { userId: user.id, email });
+    AuthController.logSuccess("User login", { 
+      userId: user.id, 
+      email,
+      role: user.role,
+      clientType 
+    });
     return AuthController.sendSuccess(res, authResponse);
   };
 
@@ -78,6 +102,14 @@ export class AuthController extends BaseController {
       "password",
     ]);
 
+    // Detect client type from request headers
+    const userAgent = req.headers['user-agent'] || '';
+    const clientTypeHeader = req.headers['x-client-type'] as string || '';
+    const clientType = detectClientType(userAgent, clientTypeHeader);
+
+    // Set role based on client type
+    const userRole = clientType === 'mobile' ? 'STANDARD' : 'GN';
+
     // Check if user already exists
     const existingUser = await AuthController.userRepository.findByEmail(
       userData.email
@@ -87,7 +119,7 @@ export class AuthController extends BaseController {
       throw new ConflictError("User with this email already exists");
     }
 
-    // Hash password
+    // Hash the plain password from frontend
     const saltRounds = 12;
     const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
 
@@ -97,8 +129,8 @@ export class AuthController extends BaseController {
       lastName: userData.lastName,
       email: userData.email,
       phone: userData.phone,
-      passwordHash: hashedPassword, // Use passwordHash for DB
-      role: "GN",
+      passwordHash: hashedPassword, // Use hashed password for DB
+      role: userRole, // Set role based on client type
       additionalData: userData.additionalData ?? {},
       division: {
         connect: {
@@ -133,6 +165,8 @@ export class AuthController extends BaseController {
     AuthController.logSuccess("User registration", {
       userId: user.id,
       email: userData.email,
+      role: user.role,
+      clientType
     });
     return AuthController.sendSuccess(res, authResponse, 201);
   };

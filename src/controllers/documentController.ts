@@ -16,13 +16,13 @@ export class DocumentController extends BaseController {
   // Upload document
   static uploadDocument = async (req: Request, res: Response): Promise<Response> => {
     const uploadData: UploadDocumentDto = req.body;
-    const userId = req.headers['x-user-id'] as string;
+    const userId = (req as any).user?.userId;
     const file = req.file;
 
-    if (!userId) throw new UnauthorizedError('User not authenticated');
+    // if (!userId) throw new UnauthorizedError('User not authenticated');
     if (!file) throw new ValidationError('No file uploaded');
 
-    DocumentController.validateRequiredFields(req.body, ['attachmentType']);
+    // DocumentController.validateRequiredFields(req.body, ['attachmentType']);
 
     const attachment = await DocumentController.attachmentRepository.createAttachment({
       uploadedByUser: {
@@ -33,6 +33,7 @@ export class DocumentController extends BaseController {
       attachmentType: uploadData.attachmentType,
       fileUrl: getFileUrl(file.filename),
       fileName: file.originalname,
+      fieldKey: uploadData.fieldKey || null,
       metadata: uploadData.metadata,
       application: {
         connect: {
@@ -47,6 +48,7 @@ export class DocumentController extends BaseController {
       fileName: attachment.fileName,
       fileUrl: attachment.fileUrl,
       applicationId: attachment.applicationId!,
+      fieldKey: attachment.fieldKey,
       metadata: attachment.metadata,
       createdAt: attachment.createdAt,
       uploadedByUser: attachment.uploadedByUserId

@@ -1,10 +1,11 @@
 import jwt from 'jsonwebtoken';
 import { UnauthorizedError } from './errors';
-
+import { UserRole } from '@prisma/client';
 
 interface JwtPayload {
   userId: string;
   email: string;
+  role: UserRole;
 }
 
 // Safely extract environment variables as strings
@@ -13,13 +14,13 @@ const JWT_REFRESH_SECRET = process.env['JWT_REFRESH_SECRET'] || '';
 const JWT_EXPIRES_IN = process.env['JWT_EXPIRES_IN'] || '15m';
 const JWT_REFRESH_EXPIRES_IN = process.env['JWT_REFRESH_EXPIRES_IN'] || '7d';
 
-export const generateAccessToken = (payload: object): string => {
+export const generateAccessToken = (payload: JwtPayload): string => {
   return jwt.sign(payload, JWT_SECRET, {
     expiresIn: JWT_EXPIRES_IN,
   } as jwt.SignOptions);
 };
 
-export const generateRefreshToken = (payload: object): string => {
+export const generateRefreshToken = (payload: JwtPayload): string => {
   return jwt.sign(payload, JWT_REFRESH_SECRET, {
     expiresIn: JWT_REFRESH_EXPIRES_IN,
   } as jwt.SignOptions);

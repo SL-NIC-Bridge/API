@@ -59,8 +59,8 @@ export class AuthController extends BaseController {
     }
 
     // generate tokens with userId and email (no client type in token)
-    const accessToken = generateAccessToken({ userId: user.id, email: user.email });
-    const refreshToken = generateRefreshToken({ userId: user.id, email: user.email });
+    const accessToken = generateAccessToken({ userId: user.id, email: user.email, role: user.role });
+    const refreshToken = generateRefreshToken({ userId: user.id, email: user.email, role: user.role });
 
     const authResponse: AuthResponseDto = {
       user: {
@@ -223,8 +223,8 @@ export class AuthController extends BaseController {
     // verify and issue new tokens
     const payload = verifyRefreshToken(refreshToken);
 
-    const newAccessToken = generateAccessToken({ userId: payload.userId, email: payload.email });
-    const newRefreshToken = generateRefreshToken({ userId: payload.userId, email: payload.email });
+    const newAccessToken = generateAccessToken({ userId: payload.userId, email: payload.email, role: payload.role });
+    const newRefreshToken = generateRefreshToken({ userId: payload.userId, email: payload.email, role: payload.role });
 
     AuthController.logSuccess("Token refresh", { userId: payload.userId });
     return AuthController.sendSuccess(res, {

@@ -12,7 +12,7 @@ const router = Router();
 router.use(authenticateToken);
 
 // Document upload and management
-router.post('/upload', uploadLimiter, uploadSingle('document'), asyncHandler(DocumentController.uploadDocument));
+router.post('/upload', uploadLimiter, uploadSingle('file'), asyncHandler(DocumentController.uploadDocument));
 router.get('/user', asyncHandler(DocumentController.getUserDocuments));
 router.get('/application/:applicationId', asyncHandler(DocumentController.getDocuments));
 

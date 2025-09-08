@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { UnauthorizedError } from '../utils/errors';
+import { verifyAccessToken } from '../utils/jwt';
 
 //Simple auth middleware for now (will implement JWT later)
 export const authenticateToken = async (req: Request, _res: Response, next: NextFunction) => {
@@ -12,16 +13,18 @@ export const authenticateToken = async (req: Request, _res: Response, next: Next
       throw new UnauthorizedError('Access token is required');
     }
 
+    const {userId, role, email} = verifyAccessToken(token);
 
-    // if (!userId) {
-    //   throw new UnauthorizedError('Authentication required');
-    // }
+    if (!userId) {
+      throw new UnauthorizedError('Authentication required');
+    }
 
-    // Attach user info to request (will be replaced with proper JWT implementation)
     (req as any).user = {
-      id: 'cmemw3pmg0000h9skco1ybqip',
-      role: 'DS',
+      userId,
+      role,
+      email,
     };
+    console.log('Authenticated user:', (req as any).user);
 
     next();
   } catch (error) {

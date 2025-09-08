@@ -12,6 +12,7 @@ router.use(authenticateToken);
 // Application routes
 router.post('/', asyncHandler(ApplicationController.createApplication));
 router.get('/', asyncHandler(ApplicationController.getApplications));
+router.get('/current', asyncHandler(ApplicationController.getCurrentApplication));
 router.get('/:id', asyncHandler(ApplicationController.getApplication));
 router.patch('/:id/status', requireGNOrAdmin, asyncHandler(ApplicationController.updateStatus));
 router.get('/:id/audit-logs', requireGNOrAdmin, asyncHandler(ApplicationController.getAuditLogs));

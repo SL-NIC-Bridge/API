@@ -18,7 +18,7 @@ export class ApplicationController extends BaseController {
 
   // Create application
   static createApplication = async (req: Request, res: Response) => {
-    const userId = req.headers['x-user-id'] as string | undefined;
+    const userId = (req as any).user?.userId;
     const applicationData: CreateApplicationDto = req.body;
 
     ApplicationController.validateRequiredFields(req.body, ['applicationType', 'applicationData']);
@@ -112,6 +112,49 @@ export class ApplicationController extends BaseController {
     const pagination = ApplicationController.calculatePagination(page, limit, total);
     ApplicationController.logSuccess('Get applications', { count: applicationResponses.length, page, limit });
     return ApplicationController.sendPaginatedSuccess(res, applicationResponses, pagination);
+  }
+
+  static getCurrentApplication = async (req: Request, res: Response): Promise<Response> => {
+    const userId = (req as any).user?.userId;
+    if (!userId) throw new UnauthorizedError('User not authenticated');
+
+    const { data: applications, total } = await ApplicationController.applicationRepository.findApplicationsWithFilters(
+      { userId }, 1, 1
+    );
+
+    if (total === 0) throw new NotFoundError('No application found for the user');
+
+    const app = applications[0]!;
+    const applicationResponse: ApplicationResponseDto = {
+      id: app.id,
+      userId: app.userId,
+      applicationType: app.applicationType,
+      applicationData: app.applicationData,
+      currentStatus: app.currentStatus,
+      createdAt: app.createdAt,
+      updatedAt: app.updatedAt,
+      user: app.user ? {
+        id: app.user.id,
+        firstName: app.user.firstName,
+        lastName: app.user.lastName,
+        email: app.user.email
+      } : {
+        id: '',
+        firstName: '',
+        lastName: '',
+        email: ''
+      },
+      attachments: app.attachments?.map(att => ({
+        id: att.id,
+        attachmentType: att.attachmentType,
+        fileName: att.fileName,
+        fileUrl: att.fileUrl,
+        createdAt: att.createdAt
+      })) ?? []
+    };
+
+    ApplicationController.logSuccess('Get current application', { applicationId: app.id, userId });
+    return ApplicationController.sendSuccess(res, applicationResponse);
   }
 
   // Get application by ID

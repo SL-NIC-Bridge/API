@@ -70,6 +70,11 @@ export class AuthController extends BaseController {
         email: user.email,
         role: user.role,
         phone: user.phone,
+        division: {
+          id: user.division?.id ?? "",
+          name: user.division?.name ?? "",
+          code: user.division?.code ?? "",
+        },
         currentStatus: user.currentStatus,
         divisionId: user.divisionId ?? undefined,
         createdAt: user.createdAt,
@@ -178,7 +183,7 @@ export class AuthController extends BaseController {
     req: Request,
     res: Response
   ): Promise<Response> => {
-    const userId = req.headers["x-user-id"] as string;
+    const userId = (req as any).user?.userId;
     if (!userId) {
       throw new UnauthorizedError("User not authenticated");
     }

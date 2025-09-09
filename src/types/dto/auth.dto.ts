@@ -19,7 +19,7 @@ export interface RegisterDto {
 }
 
 export interface AuthResponseDto {
-  user: Omit<UserResponseDto, "division">;
+  user: UserResponseDto;
   accessToken: string;
   refreshToken: string;
 }

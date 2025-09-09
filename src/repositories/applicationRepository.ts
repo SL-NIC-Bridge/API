@@ -10,6 +10,7 @@ export class ApplicationRepository extends BaseRepository<
   Prisma.ApplicationCreateInput,
   Prisma.ApplicationUpdateInput
 > {
+  
   protected model = this.prisma.application;
 
   // Find applications with filters, search, pagination
@@ -47,8 +48,8 @@ export class ApplicationRepository extends BaseRepository<
         this.model.findMany({
           where,
           include: {
-            user: { select: { id: true, firstName: true, lastName: true, email: true } },
-            attachments: { select: { id: true, attachmentType: true, fileName: true, fileUrl: true, createdAt: true } },
+            user: true,
+            attachments: true,
           },
           orderBy: { createdAt: 'desc' },
           skip,
@@ -62,6 +63,57 @@ export class ApplicationRepository extends BaseRepository<
       throw error;
     }
   }
+
+  async findDivisionApplicationsWithFilters (
+    divisionId: string,
+    filters: ApplicationFilterDto,
+    page: number = 1,
+    limit: number = 10,
+    search?: string
+  ) {
+    try {
+      const where: Prisma.ApplicationWhereInput = {
+        user: { divisionId }
+      };
+      // Filters
+      if (filters.status) where.currentStatus = filters.status;
+      if (filters.type) where.applicationType = filters.type;
+      if (filters.userId) where.userId = filters.userId;
+      if (filters.dateFrom || filters.dateTo) {
+        where.createdAt = {};
+        if (filters.dateFrom) where.createdAt.gte = new Date(filters.dateFrom);
+        if (filters.dateTo) where.createdAt.lte = new Date(filters.dateTo);
+      }
+      // Search across user fields
+      if (search) {
+        where.OR = [
+          { user: { firstName: { contains: search, mode: 'insensitive' } } },
+          { user: { lastName: { contains: search, mode: 'insensitive' } } },
+          { user: { email: { contains: search, mode: 'insensitive' } } },
+        ];
+      }
+      const skip = (page - 1) * limit;
+
+      const [data, total] = await Promise.all([
+        this.model.findMany({
+          where,
+          include: {
+            user: true,
+            attachments: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+        }),
+        this.model.count({ where }),
+      ]);
+      return { data, total };
+    }
+    catch (error) {
+      throw error;
+    }
+  }
+
 
   // Get single application with details
   async findByIdWithDetails(id: string) {

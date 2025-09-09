@@ -33,7 +33,7 @@ export class UserRepository extends BaseRepository<
 > {
   protected model = this.prisma.user;
 
-  async findByEmail(email: string): Promise<User | null> {
+  async findByEmail(email: string) {
     return this.model.findUnique({
       where: { email },
       include: { division: true },

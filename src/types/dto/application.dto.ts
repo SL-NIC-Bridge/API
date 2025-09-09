@@ -23,6 +23,7 @@ export interface ApplicationResponseDto {
     firstName: string;
     lastName: string;
     email: string;
+    phone: string;
   };
   attachments: {
     id: string;

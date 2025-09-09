@@ -14,6 +14,7 @@ import { ApplicationCurrentStatus, ApplicationType, $Enums } from '@prisma/clien
 import { EmailService } from '../services/EmailService';
 
 export class ApplicationController extends BaseController {
+
   private static applicationRepository = new ApplicationRepository();
 
   // Create application
@@ -61,7 +62,7 @@ export class ApplicationController extends BaseController {
       currentStatus: application.currentStatus,
       createdAt: application.createdAt,
       updatedAt: application.updatedAt,
-      user: { id: userId, firstName: '', lastName: '', email: '' },
+      user: { id: userId, firstName: '', lastName: '', email: '', phone: '' },
       attachments: [],
     };
 
@@ -75,11 +76,11 @@ export class ApplicationController extends BaseController {
     const search = req.query['search'] as string | undefined;
 
     const filters: ApplicationFilterDto = {
-      status: req.query['status'] as ApplicationCurrentStatus | undefined,
-      type: req.query['type'] as ApplicationType | undefined,
-      userId: req.query['userId'] as string | undefined,
-      dateFrom: req.query['dateFrom'] as string | undefined,
-      dateTo: req.query['dateTo'] as string | undefined,
+      // status: req.query['status'] as ApplicationCurrentStatus | undefined,
+      // type: req.query['type'] as ApplicationType | undefined,
+      // userId: req.query['userId'] as string | undefined,
+      // dateFrom: req.query['dateFrom'] as string | undefined,
+      // dateTo: req.query['dateTo'] as string | undefined,
     };
 
     const { data: applications, total } = await ApplicationController.applicationRepository.findApplicationsWithFilters(
@@ -98,8 +99,9 @@ export class ApplicationController extends BaseController {
         id: app.user.id,
         firstName: app.user.firstName,
         lastName: app.user.lastName,
+          phone: app.user.phone ?? "",
         email: app.user.email
-      } : { id: '', firstName: '', lastName: '', email: '' },
+      } : { id: '', firstName: '', lastName: '', email: '', phone: '' },
       attachments: app.attachments?.map(att => ({
         id: att.id,
         attachmentType: att.attachmentType,
@@ -137,12 +139,14 @@ export class ApplicationController extends BaseController {
         id: app.user.id,
         firstName: app.user.firstName,
         lastName: app.user.lastName,
-        email: app.user.email
+        email: app.user.email,
+        phone: app.user.phone ?? "",
       } : {
         id: '',
         firstName: '',
         lastName: '',
-        email: ''
+        email: '',
+        phone: '',
       },
       attachments: app.attachments?.map(att => ({
         id: att.id,
@@ -178,8 +182,9 @@ export class ApplicationController extends BaseController {
         id: application.user.id,
         firstName: application.user.firstName,
         lastName: application.user.lastName,
-        email: application.user.email
-      } : { id: '', firstName: '', lastName: '', email: '' },
+        email: application.user.email,
+        phone: application.user.phone ?? "",
+      } : { id: '', firstName: '', lastName: '', email: '', phone: '' },
       attachments: application.attachments?.map(att => ({
         id: att.id,
         attachmentType: att.attachmentType,
@@ -309,5 +314,52 @@ export class ApplicationController extends BaseController {
       ApplicationController.logError('Failed to resend notification', { applicationId: id, error: emailError });
       throw new Error('Failed to send notification email');
     }
+  }
+
+    static getGnApplications = async (req: Request, res: Response): Promise<Response> => {
+    const divisionId = req.params['id'];
+    const { page, limit } = ApplicationController.getPaginationParams(req.query);
+    const search = req.query['search'] as string | undefined;
+    const status = req.query['status'] as ApplicationCurrentStatus | undefined;
+
+    const filters: ApplicationFilterDto = {
+      //status,
+      // type: req.query['type'] as ApplicationType | undefined,
+      // userId: req.query['userId'] as string | undefined,
+      // dateFrom: req.query['dateFrom'] as string | undefined,
+      // dateTo: req.query['dateTo'] as string | undefined,
+    };
+    if (!divisionId) throw new NotFoundError('Division ID is required');
+
+    const { data: applications, total } = await ApplicationController.applicationRepository.findDivisionApplicationsWithFilters(
+      divisionId, filters, page, limit, search
+    );
+    const applicationResponses: ApplicationResponseDto[] = applications.map(app => ({
+      id: app.id,
+      userId: app.userId,
+      applicationType: app.applicationType,
+      applicationData: app.applicationData,
+      currentStatus: app.currentStatus,
+      createdAt: app.createdAt,
+      updatedAt: app.updatedAt,
+      user: app.user ? {
+        id: app.user.id,
+        firstName: app.user.firstName,
+        lastName: app.user.lastName,
+        phone: app.user.phone ?? "",
+        email: app.user.email,
+      } : { id: '', firstName: '', lastName: '', email: '' , phone: ''},
+      attachments: app.attachments?.map(att => ({
+        id: att.id,
+        attachmentType: att.attachmentType,
+        fileName: att.fileName,
+        fileUrl: att.fileUrl,
+        createdAt: att.createdAt
+      })) ?? []
+    }));
+
+    const pagination = ApplicationController.calculatePagination(page, limit, total);
+    ApplicationController.logSuccess('Get GN applications', { divisionId, count: applicationResponses.length, page, limit });
+    return ApplicationController.sendPaginatedSuccess(res, applicationResponses, pagination);
   }
 }

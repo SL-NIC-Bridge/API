@@ -317,7 +317,7 @@ export class ApplicationController extends BaseController {
     }
   }
 
-    static getGnApplications = async (req: Request, res: Response): Promise<Response> => {
+    static getDivisionApplications = async (req: Request, res: Response): Promise<Response> => {
     const divisionId = req.params['id'];
     const { page, limit } = ApplicationController.getPaginationParams(req.query);
     const search = req.query['search'] as string | undefined;

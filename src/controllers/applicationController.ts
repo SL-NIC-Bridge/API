@@ -368,14 +368,14 @@ export class ApplicationController extends BaseController {
   }
 
   static signApplication = async (req: Request, res: Response) => {
-    const { signature, applicationId } = req.body;
+    const { applicationId } = req.body;
     const actorUserId = (req as any).user?.userId;
     const file = req.file;
 
-    ApplicationController.validateRequiredFields(req.body, ['signature', 'applicationId']);
+    ApplicationController.validateRequiredFields(req.body, [ 'applicationId']);
     if (!actorUserId) throw new UnauthorizedError('User not authenticated');
     if (!applicationId) throw new NotFoundError('Application ID is required');
-    if (!file || !signature) throw new NotFoundError('Signature file is required');
+    if (!file) throw new NotFoundError('Signature file is required');
 
     // Get application with user details before updating
     const applicationBefore = await ApplicationController.applicationRepository.findByIdWithDetails(applicationId);

@@ -7,12 +7,12 @@ import { requireGNOrAdmin } from '../middleware/roleGuard';
 const router = Router();
 
 // All routes require authentication
-router.use(authenticateToken);
+// router.use(authenticateToken);
 
 // Application routes
 router.post('/', asyncHandler(ApplicationController.createApplication));
 router.get('/', asyncHandler(ApplicationController.getApplications));
-router.get('/division/:id', asyncHandler(ApplicationController.getGnApplications));
+router.get('/division/:id', asyncHandler(ApplicationController.getDivisionApplications));
 router.get('/current', asyncHandler(ApplicationController.getCurrentApplication));
 router.get('/:id', asyncHandler(ApplicationController.getApplication));
 router.patch('/:id/status', requireGNOrAdmin, asyncHandler(ApplicationController.updateStatus));

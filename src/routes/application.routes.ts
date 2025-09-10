@@ -17,6 +17,7 @@ router.get('/current', asyncHandler(ApplicationController.getCurrentApplication)
 router.get('/:id', asyncHandler(ApplicationController.getApplication));
 router.patch('/:id/status', requireGNOrAdmin, asyncHandler(ApplicationController.updateStatus));
 router.get('/:id/audit-logs', requireGNOrAdmin, asyncHandler(ApplicationController.getAuditLogs));
+router.get('/audit-logs/:id', requireGNOrAdmin, asyncHandler(ApplicationController.getAuditLogs));
 
 // Email notification routes
 router.post('/:id/resend-notification', requireGNOrAdmin, asyncHandler(ApplicationController.resendNotification));

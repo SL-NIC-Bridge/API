@@ -76,6 +76,7 @@ export class ApplicationController extends BaseController {
     const search = req.query['search'] as string | undefined;
 
     const filters: ApplicationFilterDto = {
+        status: ApplicationCurrentStatus.SUBMITTED,
       // status: req.query['status'] as ApplicationCurrentStatus | undefined,
       // type: req.query['type'] as ApplicationType | undefined,
       // userId: req.query['userId'] as string | undefined,

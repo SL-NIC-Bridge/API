@@ -90,6 +90,7 @@ export class DocumentController extends BaseController {
       attachmentType: attachment.attachmentType,
       fileName: attachment.fileName,
       fileUrl: attachment.fileUrl,
+      fieldKey: attachment.fieldKey,
       applicationId: attachment.applicationId!,
       metadata: attachment.metadata,
       createdAt: attachment.createdAt,
@@ -124,6 +125,7 @@ export class DocumentController extends BaseController {
       fileName: attachment.fileName,
       fileUrl: attachment.fileUrl,
       applicationId: attachment.applicationId!,
+      fieldKey: attachment.fieldKey,
       metadata: attachment.metadata,
       createdAt: attachment.createdAt,
       uploadedByUser: {

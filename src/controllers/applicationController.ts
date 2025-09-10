@@ -9,7 +9,7 @@ import {
   AuditLogResponseDto
 } from '../types/dto/application.dto';
 import { NotFoundError, UnauthorizedError } from '../utils/errors';
-import { ApplicationCurrentStatus, ApplicationType, $Enums } from '@prisma/client';
+import { ApplicationCurrentStatus, $Enums } from '@prisma/client';
 
 import { EmailService } from '../services/EmailService';
 
@@ -321,7 +321,7 @@ export class ApplicationController extends BaseController {
     const divisionId = req.params['id'];
     const { page, limit } = ApplicationController.getPaginationParams(req.query);
     const search = req.query['search'] as string | undefined;
-    const status = req.query['status'] as ApplicationCurrentStatus | undefined;
+    // const status = req.query['status'] as ApplicationCurrentStatus | undefined;
 
     const filters: ApplicationFilterDto = {
       //status,

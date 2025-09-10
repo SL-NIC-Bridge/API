@@ -3,6 +3,7 @@ import { ApplicationController } from '../controllers/applicationController';
 import { asyncHandler } from '../middleware/errorHandler';
 import { authenticateToken } from '../middleware/auth';
 import { requireGNOrAdmin } from '../middleware/roleGuard';
+import { uploadSingle } from '../utils/fileUpload';
 
 const router = Router();
 
@@ -16,6 +17,7 @@ router.get('/division/:id', asyncHandler(ApplicationController.getDivisionApplic
 router.get('/current', asyncHandler(ApplicationController.getCurrentApplication));
 router.get('/:id', asyncHandler(ApplicationController.getApplication));
 router.patch('/:id/status', requireGNOrAdmin, asyncHandler(ApplicationController.updateStatus));
+router.post('/sign', requireGNOrAdmin, uploadSingle('signature'), asyncHandler(ApplicationController.signApplication));
 router.get('/:id/audit-logs', requireGNOrAdmin, asyncHandler(ApplicationController.getAuditLogs));
 router.get('/audit-logs/:id', requireGNOrAdmin, asyncHandler(ApplicationController.getAuditLogs));
 

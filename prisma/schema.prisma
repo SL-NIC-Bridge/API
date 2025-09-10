@@ -72,7 +72,7 @@ enum ApplicationStatusEnum {
 enum AttachmentType {
   SIGNATURE_REGISTERED
   APPLICATION_ATTACHMENT
-  OTHER
+  CERTIFY_SIGNATURE
 }
 
 model User {

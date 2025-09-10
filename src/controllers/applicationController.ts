@@ -9,13 +9,16 @@ import {
   AuditLogResponseDto
 } from '../types/dto/application.dto';
 import { NotFoundError, UnauthorizedError } from '../utils/errors';
-import { ApplicationCurrentStatus, $Enums } from '@prisma/client';
+import { ApplicationCurrentStatus, $Enums, AttachmentType } from '@prisma/client';
 
 import { EmailService } from '../services/EmailService';
+import { AttachmentRepository } from '../repositories/attachmentRepository';
+import { getFileUrl } from '../utils/fileUpload';
 
 export class ApplicationController extends BaseController {
 
   private static applicationRepository = new ApplicationRepository();
+  private static attachmentRepository = new AttachmentRepository();
 
   // Create application
   static createApplication = async (req: Request, res: Response) => {
@@ -362,5 +365,46 @@ export class ApplicationController extends BaseController {
     const pagination = ApplicationController.calculatePagination(page, limit, total);
     ApplicationController.logSuccess('Get GN applications', { divisionId, count: applicationResponses.length, page, limit });
     return ApplicationController.sendPaginatedSuccess(res, applicationResponses, pagination);
+  }
+
+  static signApplication = async (req: Request, res: Response) => {
+    const { signature, applicationId } = req.body;
+    const actorUserId = (req as any).user?.userId;
+    const file = req.file;
+
+    ApplicationController.validateRequiredFields(req.body, ['signature', 'applicationId']);
+    if (!actorUserId) throw new UnauthorizedError('User not authenticated');
+    if (!applicationId) throw new NotFoundError('Application ID is required');
+    if (!file || !signature) throw new NotFoundError('Signature file is required');
+
+    // Get application with user details before updating
+    const applicationBefore = await ApplicationController.applicationRepository.findByIdWithDetails(applicationId);
+    if (!applicationBefore) throw new NotFoundError('Application not found');
+
+    // Sign the application
+    const attachment = await ApplicationController.attachmentRepository.create({
+      attachmentType: AttachmentType.CERTIFY_SIGNATURE,
+      fileName: `signature_${applicationId}${file.filename.substring(file.filename.lastIndexOf('.'))}`,
+      fileUrl: getFileUrl(file.filename),
+      application: {
+        connect: {
+          id: applicationId
+        }
+      },
+      uploadedByUser:{
+        connect: {
+          id: actorUserId
+        }
+      },
+    });
+
+    ApplicationController.logSuccess('Sign application', { applicationId, attachmentId: attachment.id, actorUserId });
+    return ApplicationController.sendSuccess(res, { 
+      id: attachment.id,
+      fileName: attachment.fileName,
+      fileUrl: attachment.fileUrl,
+      createdAt: attachment.createdAt
+    });
+    
   }
 }

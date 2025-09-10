@@ -24,6 +24,10 @@ export interface ApplicationResponseDto {
     lastName: string;
     email: string;
     phone: string;
+    division?: {
+      code:string;
+      name: string;
+    };
   };
   attachments: {
     id: string;

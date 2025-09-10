@@ -7,7 +7,7 @@ import { requireGNOrAdmin } from '../middleware/roleGuard';
 const router = Router();
 
 // All routes require authentication
-//router.use(authenticateToken);
+router.use(authenticateToken);
 
 // Application routes
 router.post('/', asyncHandler(ApplicationController.createApplication));

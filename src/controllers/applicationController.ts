@@ -203,7 +203,7 @@ export class ApplicationController extends BaseController {
   static updateStatus = async (req: Request, res: Response) => {
     const id = req.params['id'];
     const { status, comment }: UpdateApplicationStatusDto = req.body;
-    const actorUserId = req.headers['x-user-id'] as string | undefined;
+    const actorUserId = (req as any).user?.userId;
 
     ApplicationController.validateRequiredParams(req.params, ['id']);
     ApplicationController.validateRequiredFields(req.body, ['status']);

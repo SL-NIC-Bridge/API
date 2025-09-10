@@ -14,7 +14,7 @@ router.use(authenticateToken);
 // GN management routes (DS only)
 router.get('/gn/pending', requireAdmin, asyncHandler(UserController.getPendingRegistrations));
 router.get('/gn/all', requireGNOrAdmin, asyncHandler(UserController.getAllGNs));
-router.put('/gn/:id', requireAdmin, asyncHandler(UserController.updateGN));
+router.put('/gn/:id', asyncHandler(UserController.updateGN));
 router.post('/gn/:id/reset-password', requireAdmin, asyncHandler(UserController.resetPassword));
 router.put('/gn/:id/status', requireAdmin, asyncHandler(UserController.updateStatus));
 

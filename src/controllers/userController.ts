@@ -1,4 +1,4 @@
-import { Request, RequestHandler, Response } from "express";
+import { Request, Response } from "express";
 import { BaseController } from "./baseController";
 import { UserRepository } from "../repositories";
 import {
@@ -19,11 +19,9 @@ import {
 } from "@prisma/client";
 import { NotFoundError } from "../utils/errors";
 import { getFileUrl } from '../utils/fileUpload';
-import { AttachmentRepository } from '../repositories/attachmentRepository';
 
 export class UserController extends BaseController {
 
-  private static attachmentRepository = new AttachmentRepository();
   // Get pending GN registrations
   static getPendingRegistrations = async (
     _req: Request,

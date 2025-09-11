@@ -74,51 +74,51 @@ export class ApplicationController extends BaseController {
   }
 
   // Get applications with filters
-  static getApplications = async (req: Request, res: Response): Promise<Response> => {
+static getApplications = async (req: Request, res: Response): Promise<Response> => {
     const { page, limit } = ApplicationController.getPaginationParams(req.query);
     const search = req.query['search'] as string | undefined;
 
     const filters: ApplicationFilterDto = {
-        status: ApplicationCurrentStatus.SUBMITTED,
-      // status: req.query['status'] as ApplicationCurrentStatus | undefined,
-      // type: req.query['type'] as ApplicationType | undefined,
-      // userId: req.query['userId'] as string | undefined,
-      // dateFrom: req.query['dateFrom'] as string | undefined,
-      // dateTo: req.query['dateTo'] as string | undefined,
+        status: req.query['status'] as ApplicationCurrentStatus | undefined,
+        // If no status is provided, don't filter by status (return all)
+        // type: req.query['type'] as ApplicationType | undefined,
+        // userId: req.query['userId'] as string | undefined,
+        // dateFrom: req.query['dateFrom'] as string | undefined,
+        // dateTo: req.query['dateTo'] as string | undefined,
     };
 
     const { data: applications, total } = await ApplicationController.applicationRepository.findApplicationsWithFilters(
-      filters, page, limit, search
+        filters, page, limit, search
     );
 
     const applicationResponses: ApplicationResponseDto[] = applications.map(app => ({
-      id: app.id,
-      userId: app.userId,
-      applicationType: app.applicationType,
-      applicationData: app.applicationData,
-      currentStatus: app.currentStatus,
-      createdAt: app.createdAt,
-      updatedAt: app.updatedAt,
-      user: app.user ? {
-        id: app.user.id,
-        firstName: app.user.firstName,
-        lastName: app.user.lastName,
-          phone: app.user.phone ?? "",
-        email: app.user.email
-      } : { id: '', firstName: '', lastName: '', email: '', phone: '' },
-      attachments: app.attachments?.map(att => ({
-        id: att.id,
-        attachmentType: att.attachmentType,
-        fileName: att.fileName,
-        fileUrl: att.fileUrl,
-        createdAt: att.createdAt
-      })) ?? []
+        id: app.id,
+        userId: app.userId,
+        applicationType: app.applicationType,
+        applicationData: app.applicationData,
+        currentStatus: app.currentStatus,
+        createdAt: app.createdAt,
+        updatedAt: app.updatedAt,
+        user: app.user ? {
+            id: app.user.id,
+            firstName: app.user.firstName,
+            lastName: app.user.lastName,
+            phone: app.user.phone ?? "",
+            email: app.user.email
+        } : { id: '', firstName: '', lastName: '', email: '', phone: '' },
+        attachments: app.attachments?.map(att => ({
+            id: att.id,
+            attachmentType: att.attachmentType,
+            fileName: att.fileName,
+            fileUrl: att.fileUrl,
+            createdAt: att.createdAt
+        })) ?? []
     }));
 
     const pagination = ApplicationController.calculatePagination(page, limit, total);
     ApplicationController.logSuccess('Get applications', { count: applicationResponses.length, page, limit });
     return ApplicationController.sendPaginatedSuccess(res, applicationResponses, pagination);
-  }
+}
 
   static getCurrentApplication = async (req: Request, res: Response): Promise<Response> => {
     const userId = (req as any).user?.userId;

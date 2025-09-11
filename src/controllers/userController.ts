@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Request, RequestHandler, Response } from "express";
 import { BaseController } from "./baseController";
 import { UserRepository } from "../repositories";
 import {
@@ -18,8 +18,12 @@ import {
   UserAccountStatusEnum,
 } from "@prisma/client";
 import { NotFoundError } from "../utils/errors";
+import { getFileUrl } from '../utils/fileUpload';
+import { AttachmentRepository } from '../repositories/attachmentRepository';
 
 export class UserController extends BaseController {
+
+  private static attachmentRepository = new AttachmentRepository();
   // Get pending GN registrations
   static getPendingRegistrations = async (
     _req: Request,
@@ -387,6 +391,70 @@ export class UserController extends BaseController {
       201
     ) as Response<SingleUserResponseDto>;
   };
+
+static createGNWithSignature = async (req: Request, res: Response): Promise<Response<SingleUserResponseDto>> => {
+  const userData: CreateUserDto = req.body;
+  const file = req.file;
+
+  UserController.validateRequiredFields(req.body, ["email", "password", "firstName", "lastName"]);
+  if (!file) throw new NotFoundError('Signature file is required');
+
+  // Check if user already exists
+  const existingUser = await UserController.userRepository.findByEmail(userData.email);
+  if (existingUser) {
+    throw new Error("User with this email already exists");
+  }
+
+  // Hash the password
+  const passwordHash = await bcrypt.hash(userData.password, 10);
+
+  // Parse additionalData if it's a string (from FormData)
+  const parsedAdditionalData = typeof userData.additionalData === 'string' 
+    ? JSON.parse(userData.additionalData) 
+    : userData.additionalData || {};
+
+  // Add signature URL to additional data
+  parsedAdditionalData.signatureUrl = getFileUrl(file.filename);
+
+  // Map DTO to Prisma UserCreateInput
+  const createInput = {
+    firstName: userData.firstName,
+    lastName: userData.lastName,
+    email: userData.email,
+    phone: userData.phone,
+    additionalData: parsedAdditionalData,
+    passwordHash,
+    role: userData.role ?? UserRole.GN,
+    divisionId: userData.divisionId ?? null,
+    currentStatus: UserCurrentStatus.PENDING_APPROVAL,
+  };
+
+  // Create user in database
+  const user = await UserController.userRepository.create(createInput);
+
+  // Map to response DTO
+  const userResponse: UserResponseDto = {
+    id: user.id,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.role,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+    phone: user.phone,
+    additionalData: user.additionalData ?? {},
+    currentStatus: user.currentStatus,
+    divisionId: user.divisionId ?? undefined,
+  };
+
+  UserController.logSuccess("Create GN with signature", {
+    userId: user.id,
+    email: userData.email,
+    signatureUrl: parsedAdditionalData.signatureUrl,
+  });
+  
+  return UserController.sendSuccess(res, userResponse, 201) as Response<SingleUserResponseDto>;
+};
 
   // Update user
   static updateUser = async (

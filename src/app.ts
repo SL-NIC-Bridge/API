@@ -47,7 +47,7 @@ app.use((req, _res, next) => {
 // Static files serving
 app.use('/api/v1/uploads', express.static(path.join(__dirname, '../uploads'), {
   setHeaders: (res) => {   
-
+    //Use this to fix CORS issue with loading images in some browsers
     res.set('Cross-Origin-Resource-Policy', 'cross-origin');
   }
 }));

@@ -13,6 +13,8 @@ router.post('/refresh-token', asyncHandler(AuthController.refreshToken));
 
 // Protected routes
 router.get('/me', authenticateToken, asyncHandler(AuthController.getCurrentUser));
+router.patch('/me', authenticateToken, asyncHandler(AuthController.updateProfile));
 router.post('/logout', authenticateToken, asyncHandler(AuthController.logout));
+router.patch('/change-password', authenticateToken, asyncHandler(AuthController.changePassword));
 
 export default router;

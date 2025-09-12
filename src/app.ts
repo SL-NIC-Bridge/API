@@ -43,7 +43,15 @@ app.use((req, _res, next) => {
 });
 
 // Static files serving
-app.use('/api/v1/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Static files serving
+app.use('/api/v1/uploads', express.static(path.join(__dirname, '../uploads'), {
+  setHeaders: (res) => {   
+
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
+
 
 // API routes
 app.use('/api/v1', routes);

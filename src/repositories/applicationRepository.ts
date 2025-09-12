@@ -48,7 +48,7 @@ export class ApplicationRepository extends BaseRepository<
         this.model.findMany({
           where,
           include: {
-            user: true,
+            user: {include: { division: true } },
             attachments: true,
           },
           orderBy: { createdAt: 'desc' },
@@ -122,7 +122,7 @@ export class ApplicationRepository extends BaseRepository<
         where: { id },
         include: {
           user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
-          attachments: { select: { id: true, attachmentType: true, fileName: true, fileUrl: true, metadata: true, createdAt: true } },
+          attachments: { include: { uploadedByUser: { select: { id: true, firstName: true, lastName: true, email: true } } } },
           applicationStatuses: {
             include: { actor: { select: { id: true, firstName: true, lastName: true, email: true, role: true } } },
             orderBy: { createdAt: 'desc' },

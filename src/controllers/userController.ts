@@ -197,6 +197,11 @@ export class UserController extends BaseController {
       role: u.role,
       createdAt: u.createdAt,
       updatedAt: u.updatedAt,
+      division: {
+        id: u.division?.id ?? "",
+        name: u.division?.name ?? "",
+        code: u.division?.code ?? "",
+      },
       currentStatus: u.currentStatus,
       ...(u.divisionId ? { divisionId: u.divisionId } : {}),
       ...(u.additionalData

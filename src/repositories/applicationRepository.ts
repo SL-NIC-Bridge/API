@@ -121,7 +121,7 @@ export class ApplicationRepository extends BaseRepository<
       return await this.model.findUnique({
         where: { id },
         include: {
-          user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
+          user: { include: { division: true } },
           attachments: { include: { uploadedByUser: { select: { id: true, firstName: true, lastName: true, email: true } } } },
           applicationStatuses: {
             include: { actor: { select: { id: true, firstName: true, lastName: true, email: true, role: true } } },

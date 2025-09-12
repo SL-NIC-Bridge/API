@@ -105,10 +105,10 @@ static getApplications = async (req: Request, res: Response): Promise<Response> 
             lastName: app.user.lastName,
             phone: app.user.phone ?? "",
             email: app.user.email,
-            division: app.user.division ? {
-                code: app.user.division.code,
-                name: app.user.division.name
-            } : { code: '', name: '' },
+            division: {
+                code: app?.user?.division?.code || '',
+                name: app?.user?.division?.name || '',
+            } 
         } : { id: '', firstName: '', lastName: '', email: '', phone: '' },
         attachments: app.attachments?.map(att => ({
             id: att.id,
@@ -119,6 +119,8 @@ static getApplications = async (req: Request, res: Response): Promise<Response> 
             fieldKey: att.fieldKey || ''
         })) ?? []
     }));
+
+    console.log('aaaaaaaaaaaaaaaaaaaaaaa', applications[0]?.user?.division);
 
     const pagination = ApplicationController.calculatePagination(page, limit, total);
     ApplicationController.logSuccess('Get applications', { count: applicationResponses.length, page, limit });
@@ -195,6 +197,10 @@ static getApplications = async (req: Request, res: Response): Promise<Response> 
         lastName: application.user.lastName,
         email: application.user.email,
         phone: application.user.phone ?? "",
+        division: {
+          code: application?.user?.division?.code || '',
+          name: application?.user?.division?.name || '',
+        }
       } : { id: '', firstName: '', lastName: '', email: '', phone: '' },
       attachments: application.attachments?.map(att => ({
         id: att.id,

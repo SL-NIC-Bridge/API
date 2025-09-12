@@ -34,6 +34,13 @@ export interface ApplicationResponseDto {
     attachmentType: string;
     fileName: string;
     fileUrl: string;
+    fieldKey: string;
+    uploadedByUser?: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+    };
     createdAt: Date;
   }[];
 }

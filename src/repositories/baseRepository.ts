@@ -110,7 +110,7 @@ export abstract class BaseRepository<
     }
   }
 
-  async updateById(id: string, data: UpdateInput): Promise<ModelType> {
+  async updateById(id: string, data: UpdateInput) {
     try {
       return await this.model.update({
         where: { id },

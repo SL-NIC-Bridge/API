@@ -8,9 +8,9 @@ import {
   AuthResponseDto,
   RefreshTokenDto,
 } from "../types/dto/auth.dto";
-import { UserResponseDto } from "../types/dto/user.dto";
-import { UnauthorizedError, ConflictError, ValidationError } from "../utils/errors";
-import { UserAccountStatusEnum } from "@prisma/client";
+import { SingleUserResponseDto, UpdateUserDto, UserResponseDto } from "../types/dto/user.dto";
+import { UnauthorizedError, ConflictError, ValidationError, NotFoundError } from "../utils/errors";
+import { UserAccountStatusEnum, UserRole } from "@prisma/client";
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
 import { detectClientType, isRoleAllowedForClient } from '../utils/clientDetection';
 
@@ -107,14 +107,6 @@ export class AuthController extends BaseController {
       "password",
     ]);
 
-    // Detect client type from request headers
-    const userAgent = req.headers['user-agent'] || '';
-    const clientTypeHeader = req.headers['x-client-type'] as string || '';
-    const clientType = detectClientType(userAgent, clientTypeHeader);
-
-    // Set role based on client type
-    const userRole = clientType === 'mobile' ? 'STANDARD' : 'GN';
-
     // Check if user already exists
     const existingUser = await AuthController.userRepository.findByEmail(
       userData.email
@@ -134,8 +126,8 @@ export class AuthController extends BaseController {
       lastName: userData.lastName,
       email: userData.email,
       phone: userData.phone,
-      passwordHash: hashedPassword, // Use hashed password for DB
-      role: userRole, // Set role based on client type
+      passwordHash: hashedPassword, 
+      role: UserRole.STANDARD, 
       additionalData: userData.additionalData ?? {},
       division: {
         connect: {
@@ -149,6 +141,12 @@ export class AuthController extends BaseController {
   typeof user.additionalData === "object" && user.additionalData !== null
     ? user.additionalData
     : {};
+
+    const accountStatus = await AuthController.userRepository.updateStatus(user.id, UserAccountStatusEnum.ACTIVE, user.id, 'Registration')
+
+    const accessToken = generateAccessToken({ userId: user.id, email: user.email, role: user.role });
+    const refreshToken = generateRefreshToken({ userId: user.id, email: user.email, role: user.role });
+
     const authResponse: AuthResponseDto = {
       user: {
         id: user.id,
@@ -163,16 +161,17 @@ export class AuthController extends BaseController {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
-      accessToken: "temp-token",
-      refreshToken: "temp-refresh-token",
+      accessToken,
+      refreshToken
     };
 
     AuthController.logSuccess("User registration", {
       userId: user.id,
       email: userData.email,
       role: user.role,
-      clientType
+      accountStatus,
     });
+
     return AuthController.sendSuccess(res, authResponse, 201);
   };
 
@@ -247,5 +246,71 @@ export class AuthController extends BaseController {
     return AuthController.sendSuccess(res, {
       message: "Logged out successfully",
     });
+  };
+
+  static changePassword = async (req: Request, res: Response): Promise<Response> => {
+    const userId = (req as any).user?.userId;
+    if (!userId) {
+      throw new UnauthorizedError("User not authenticated");
+    }
+    
+    const { currentPassword, newPassword } = req.body;
+    AuthController.validateRequiredFields(req.body, ["currentPassword", "newPassword"]);  
+
+    const user = await AuthController.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundError("User not found");
+    }
+
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isPasswordValid) {
+      throw new ValidationError("Current password is incorrect");
+    }
+
+    // Hash the new password
+    const saltRounds = 12;
+    const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // Update user's password
+    await AuthController.userRepository.updateById(userId, { passwordHash: hashedNewPassword });
+
+    AuthController.logSuccess("Password changed", { userId });
+    return AuthController.sendSuccess(res, { message: "Password changed successfully" });
+  }
+
+  static updateProfile = async (
+    req: Request,
+    res: Response
+  ): Promise<Response<SingleUserResponseDto>> => {
+    const userId = (req as any).user?.userId;
+    const updateData: UpdateUserDto = req.body;
+
+    if (!userId) {
+      throw new NotFoundError("User not authenticated");
+    }
+
+    const user = await AuthController.userRepository.updateById(
+      userId!,
+      updateData
+    );
+
+    const userResponse: UserResponseDto = {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      role: user.role,
+      divisionId: user.divisionId,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      currentStatus: user.currentStatus,
+    };
+
+    AuthController.logSuccess("Update user", { userId });
+    return AuthController.sendSuccess(
+      res,
+      userResponse
+    ) as Response<SingleUserResponseDto>;
   };
 }

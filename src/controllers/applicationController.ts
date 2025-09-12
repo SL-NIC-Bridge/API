@@ -98,20 +98,25 @@ static getApplications = async (req: Request, res: Response): Promise<Response> 
         applicationData: app.applicationData,
         currentStatus: app.currentStatus,
         createdAt: app.createdAt,
-        updatedAt: app.updatedAt,
+        updatedAt: app.updatedAt,        
         user: app.user ? {
             id: app.user.id,
             firstName: app.user.firstName,
             lastName: app.user.lastName,
             phone: app.user.phone ?? "",
-            email: app.user.email
+            email: app.user.email,
+            division: app.user.division ? {
+                code: app.user.division.code,
+                name: app.user.division.name
+            } : { code: '', name: '' },
         } : { id: '', firstName: '', lastName: '', email: '', phone: '' },
         attachments: app.attachments?.map(att => ({
             id: att.id,
             attachmentType: att.attachmentType,
             fileName: att.fileName,
             fileUrl: att.fileUrl,
-            createdAt: att.createdAt
+            createdAt: att.createdAt,
+            fieldKey: att.fieldKey || ''
         })) ?? []
     }));
 
@@ -157,7 +162,9 @@ static getApplications = async (req: Request, res: Response): Promise<Response> 
         attachmentType: att.attachmentType,
         fileName: att.fileName,
         fileUrl: att.fileUrl,
-        createdAt: att.createdAt
+        createdAt: att.createdAt,
+       
+        fieldKey: att.fieldKey || ''
       })) ?? []
     };
 
@@ -194,7 +201,15 @@ static getApplications = async (req: Request, res: Response): Promise<Response> 
         attachmentType: att.attachmentType,
         fileName: att.fileName,
         fileUrl: att.fileUrl,
-        createdAt: att.createdAt
+        createdAt: att.createdAt,
+        uploadedByUser: att.uploadedByUser ? {
+          id: att.uploadedByUser.id,
+          firstName: att.uploadedByUser.firstName,
+          lastName: att.uploadedByUser.lastName,
+          email: att.uploadedByUser.email,
+        } : { id: '', firstName: '', lastName: '', email: '' },
+        fieldKey: att.fieldKey || ''
+        
       })) ?? []
     };
 
@@ -358,7 +373,8 @@ static getApplications = async (req: Request, res: Response): Promise<Response> 
         attachmentType: att.attachmentType,
         fileName: att.fileName,
         fileUrl: att.fileUrl,
-        createdAt: att.createdAt
+        createdAt: att.createdAt,
+        fieldKey: att.fieldKey || ''
       })) ?? []
     }));
 

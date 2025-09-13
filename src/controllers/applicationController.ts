@@ -33,6 +33,11 @@ export class ApplicationController extends BaseController {
       applicationData: applicationData.applicationData,
       currentStatus: ApplicationCurrentStatus.SUBMITTED,
       user: { connect: { id: userId } },
+      applicationStatuses: { create: {
+        status: ApplicationCurrentStatus.SUBMITTED,
+        actorUserId: userId,
+        comment: 'Application submitted'
+      }}
     });
 
     // Get user details for email

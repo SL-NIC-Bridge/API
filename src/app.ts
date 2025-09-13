@@ -3,11 +3,11 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import path from 'path';
-import { config } from './config/environment';
 import { logger } from './config/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { generalLimiter } from './middleware/rateLimiter';
 import routes from './routes';
+import corsOptions from './config/cors';
 
 const app = express();
 
@@ -15,12 +15,7 @@ const app = express();
 app.use(helmet());
 
 // CORS configuration
-app.use(cors({
-  origin: config.cors.origin,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id', 'x-user-role'],
-}));
+app.use(cors(corsOptions));
 
 // Compression middleware
 app.use(compression());
@@ -41,8 +36,6 @@ app.use((req, _res, next) => {
   });
   next();
 });
-
-// Static files serving
 
 // Static files serving
 app.use('/api/v1/uploads', express.static(path.join(__dirname, '../uploads'), {

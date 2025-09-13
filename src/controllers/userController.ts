@@ -16,9 +16,11 @@ import {
   UserCurrentStatus,
   UserRole,
   UserAccountStatusEnum,
+  $Enums,
 } from "@prisma/client";
 import { NotFoundError } from "../utils/errors";
 import { getFileUrl } from '../utils/fileUpload';
+import { UserEmailService } from "../services/UserEmailService";
 
 export class UserController extends BaseController {
 
@@ -104,13 +106,90 @@ export class UserController extends BaseController {
   };
 
   
-  static updateStatus = async (req: Request, res: Response) => {
+  // static updateStatus = async (req: Request, res: Response) => {
+  //   const id = req.params["id"];
+  //   UserController.validateRequiredParams(req.params, ["id"]);
+
+  //   // const body: UpdateUserDto = req.body;
+  //   const body: UpdateUserDto = {
+  //     currentStatus: req.body.currentStatus || req.body.status, // fallback to status
+  //     comment: req.body.comment,
+  //   };
+
+  //   // Validate the status is provided and is valid
+  //   if (!body.currentStatus) {
+  //     throw new NotFoundError("Status is required");
+  //   }
+
+  //   // Validate that the status is one of the allowed values
+  //   const allowedStatuses = Object.values(UserAccountStatusEnum);
+  //   if (!allowedStatuses.includes(body.currentStatus)) {
+  //     throw new NotFoundError(
+  //       `Invalid status. Must be one of: ${allowedStatuses.join(", ")}`
+  //     );
+  //   }
+
+  //   // Get the user performing the status update, or null if not authenticated
+  //   const changedBy = (req as any).user?.id ?? null;
+
+  //   console.log(
+  //     "Updating status for user:",
+  //     id,
+  //     "to",
+  //     body.currentStatus,
+  //     "by",
+  //     changedBy
+  //   );
+
+  //   // Verify user exists
+  //   const user = await UserController.userRepository.findById(id!);
+  //   if (!user) throw new NotFoundError("User not found");
+
+  //   // Optional
+  //   // For example, prevent changing status if user is not a GN
+  //   if (user.role !== UserRole.GN) {
+  //     throw new NotFoundError("Status can only be updated for GN users");
+  //   }
+
+  //   // Optional
+  //   // For example, once rejected, maybe only allow reactivation by admin
+  //   if (
+  //     user.currentStatus === UserAccountStatusEnum.REJECTED &&
+  //     body.currentStatus !== UserAccountStatusEnum.PENDING_APPROVAL &&
+  //     body.currentStatus !== UserAccountStatusEnum.ACTIVE
+  //   ) {
+  //     throw new NotFoundError("Invalid status transition from REJECTED");
+  //   }
+
+  //   const updated = await UserController.userRepository.updateStatus(
+  //     id!,
+  //     body.currentStatus,
+  //     changedBy,
+  //     body.comment
+  //   );
+
+  //   UserController.logSuccess("Update user status", {
+  //     userId: id,
+  //     oldStatus: user.currentStatus,
+  //     newStatus: body.currentStatus,
+  //   });
+
+  //   return UserController.sendSuccess(res, {
+  //     id: updated.id,
+  //     currentStatus: updated.currentStatus,
+  //     message: `User status updated to ${body.currentStatus}`,
+  //   });
+  // };
+
+
+
+  
+static updateStatus = async (req: Request, res: Response) => {
     const id = req.params["id"];
     UserController.validateRequiredParams(req.params, ["id"]);
 
-    // const body: UpdateUserDto = req.body;
     const body: UpdateUserDto = {
-      currentStatus: req.body.currentStatus || req.body.status, // fallback to status
+      currentStatus: req.body.currentStatus || req.body.status,
       comment: req.body.comment,
     };
 
@@ -139,18 +218,19 @@ export class UserController extends BaseController {
       changedBy
     );
 
-    // Verify user exists
+    // Verify user exists and get current status
     const user = await UserController.userRepository.findById(id!);
     if (!user) throw new NotFoundError("User not found");
 
-    // Optional
-    // For example, prevent changing status if user is not a GN
+    // Store the old status for email notification
+    const oldStatus = user.currentStatus;
+
+    // Optional validation
     if (user.role !== UserRole.GN) {
       throw new NotFoundError("Status can only be updated for GN users");
     }
 
-    // Optional
-    // For example, once rejected, maybe only allow reactivation by admin
+    // Optional status transition validation
     if (
       user.currentStatus === UserAccountStatusEnum.REJECTED &&
       body.currentStatus !== UserAccountStatusEnum.PENDING_APPROVAL &&
@@ -159,6 +239,7 @@ export class UserController extends BaseController {
       throw new NotFoundError("Invalid status transition from REJECTED");
     }
 
+    // Update the user status
     const updated = await UserController.userRepository.updateStatus(
       id!,
       body.currentStatus,
@@ -166,18 +247,35 @@ export class UserController extends BaseController {
       body.comment
     );
 
-    UserController.logSuccess("Update user status", {
-      userId: id,
-      oldStatus: user.currentStatus,
-      newStatus: body.currentStatus,
-    });
+    // Send email notifications asynchronously (don't block the response)
+    if (oldStatus !== body.currentStatus) {
+      // Run email sending in background
+      UserEmailService.sendAllUserStatusChangeNotifications(
+        updated, // or use the updated user object
+        oldStatus,
+        body.currentStatus,
+        body.comment,
+        changedBy
+      ).then((result) => {
+        console.log('📧 Email notifications sent:', {
+          admin: result.adminNotification.success,
+          user: result.userNotification.success
+        });
+      }).catch((error) => {
+        console.error('❌ Failed to send email notifications:', error);
+        // Optionally log to your error tracking system
+      });
+    }
 
-    return UserController.sendSuccess(res, {
-      id: updated.id,
-      currentStatus: updated.currentStatus,
-      message: `User status updated to ${body.currentStatus}`,
+    // Return the response immediately
+    return res.status(200).json({
+      success: true,
+      message: "User status updated successfully",
+      data: updated,
+      emailNotification: oldStatus !== body.currentStatus ? "Email notifications are being sent" : "No status change, no email sent"
     });
   };
+
 
   // Get all active GNs
   static getAllGNs = async (

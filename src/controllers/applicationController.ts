@@ -120,7 +120,6 @@ static getApplications = async (req: Request, res: Response): Promise<Response> 
         })) ?? []
     }));
 
-    console.log('aaaaaaaaaaaaaaaaaaaaaaa', applications[0]?.user?.division);
 
     const pagination = ApplicationController.calculatePagination(page, limit, total);
     ApplicationController.logSuccess('Get applications', { count: applicationResponses.length, page, limit });

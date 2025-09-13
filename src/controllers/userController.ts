@@ -321,6 +321,8 @@ export class UserController extends BaseController {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       currentStatus: user.currentStatus,
+      additionalData: user.additionalData ?? {},
+      division: user.division
     };
 
     UserController.logSuccess("Get user by ID", { userId: id });

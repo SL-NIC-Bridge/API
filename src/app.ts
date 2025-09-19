@@ -2,19 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
-
-// Load environment variables
-dotenv.config();
-
-// Import middleware
-import { requestLogger, errorLogger } from './middleware/logger';
-import { errorHandler, notFoundHandler } from './middleware/errorHandler';
-
-// Import routes
-import healthRoutes from './routes/health';
-import userRoutes from './routes/users';
+import path from 'path';
+import { logger } from './config/logger';
+import { errorHandler } from './middleware/errorHandler';
+import { generalLimiter } from './middleware/rateLimiter';
+import routes from './routes';
+import corsOptions from './config/cors';
 
 const app = express();
 
@@ -22,54 +15,53 @@ const app = express();
 app.use(helmet());
 
 // CORS configuration
-app.use(cors({
-  origin: process.env['CORS_ORIGIN'] || 'http://localhost:3000',
-  credentials: true,
-}));
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env['RATE_LIMIT_WINDOW_MS'] || '900000'), // 15 minutes
-  max: parseInt(process.env['RATE_LIMIT_MAX_REQUESTS'] || '100'), // limit each IP to 100 requests per windowMs
-  message: {
-    error: 'Too many requests from this IP, please try again later.',
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use(limiter);
+app.use(cors(corsOptions));
 
 // Compression middleware
 app.use(compression());
+
+// Rate limiting
+app.use(generalLimiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request logging middleware
-app.use(requestLogger);
+app.use((req, _res, next) => {
+  logger.info(`${req.method} ${req.path}`, {
+    ip: req.ip,
+    userAgent: req.get('User-Agent'),
+    body: req.method === 'POST' || req.method === 'PUT' ? req.body : undefined,
+  });
+  next();
+});
 
-// Routes
-app.use('/api/health', healthRoutes);
-app.use('/api/users', userRoutes);
+// Static files serving
+app.use('/api/v1/uploads', express.static(path.join(__dirname, '../uploads'), {
+  setHeaders: (res) => {   
+    //Use this to fix CORS issue with loading images in some browsers
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
 
-// Root route
-app.get('/', (_req, res) => {
-  res.json({
-    message: 'SL-NIC-Bridge API',
-    version: '1.0.0',
-    status: 'running',
-    timestamp: new Date().toISOString(),
+
+// API routes
+app.use('/api/v1', routes);
+
+
+// 404 handler
+app.use('*_404', (_req, res) => {
+  res.status(404).json({
+    success: false,
+    error: {
+      message: 'Route not found',
+      code: 'NOT_FOUND',
+    },
   });
 });
 
-// 404 handler
-app.use(notFoundHandler);
-
-// Error logging middleware
-app.use(errorLogger);
-
-// Error handling middleware
+// Global error handler (must be last)
 app.use(errorHandler);
 
-export default app; 
+export default app;

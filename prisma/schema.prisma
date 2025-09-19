@@ -27,11 +27,17 @@ enum UserAccountStatusEnum {
   DEACTIVATED
 }
 
+// enum ApplicationType {
+//   NEW
+//   RENEWAL
+//   REPLACEMENT_LOST
+//   REPLACEMENT_DAMAGED
+// }
+
 enum ApplicationType {
-  NEW
-  RENEWAL
-  REPLACEMENT_LOST
-  REPLACEMENT_DAMAGED
+  new_nic     @map("NEW")
+  replace_nic @map("REPLACEMENT")
+  correct_nic @map("CORRECTION")
 }
 
 enum ApplicationCurrentStatus {
@@ -50,17 +56,23 @@ enum ApplicationStatusEnum {
   SENT_TO_DRP
 }
 
+// enum AttachmentType {
+//   SIGNATURE_ON_APPLICATION
+//   BIRTH_CERT
+//   ADDRESS_PROOF
+//   CURRENT_NIC_COPY
+//   POLICE_REPORT
+//   AFFIDAVIT
+//   DAMAGED_NIC_PHOTO
+//   NAME_CHANGE_DOC
+//   REGISTERED_SIGNATURE
+//   OTHER
+// }
+
 enum AttachmentType {
-  SIGNATURE_ON_APPLICATION
-  BIRTH_CERT
-  ADDRESS_PROOF
-  CURRENT_NIC_COPY
-  POLICE_REPORT
-  AFFIDAVIT
-  DAMAGED_NIC_PHOTO
-  NAME_CHANGE_DOC
-  REGISTERED_SIGNATURE
-  OTHER
+  SIGNATURE_REGISTERED
+  APPLICATION_ATTACHMENT
+  CERTIFY_SIGNATURE
 }
 
 model User {
@@ -72,6 +84,7 @@ model User {
   passwordHash   String            @map("password_hash")
   currentStatus  UserCurrentStatus @map("current_status")
   role           UserRole
+  additionalData Json?             @map("additional_data")
   divisionId     String?           @map("division_id")
   createdAt      DateTime          @default(now()) @map("created_at")
   updatedAt      DateTime          @updatedAt @map("updated_at")
@@ -91,20 +104,20 @@ model UserAccountStatus {
   id              String                   @id @default(cuid())
   userId          String                   @map("user_id")
   status          UserAccountStatusEnum
-  changedByUserId String                   @map("changed_by_user_id")
+  changedByUserId String?                   @map("changed_by_user_id")
   comment         String?
   createdAt       DateTime                 @default(now()) @map("created_at")
 
   // Relations
   user      User @relation("UserStatus", fields: [userId], references: [id])
-  changedBy User @relation("ChangedBy", fields: [changedByUserId], references: [id])
+  changedBy User? @relation("ChangedBy", fields: [changedByUserId], references: [id])
 
   @@map("user_account_statuses")
 }
 
 model Division {
   id        String   @id @default(cuid())
-  code      Int      @unique
+  code      String   @unique 
   name      String
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -137,6 +150,7 @@ model Attachment {
   applicationId     String?        @map("application_id")
   uploadedByUserId  String         @map("uploaded_by_user_id")
   attachmentType    AttachmentType @map("attachment_type")
+  fieldKey          String?        @map("field_key")
   fileUrl           String         @map("file_url")
   fileName          String         @map("file_name")
   metadata          Json?

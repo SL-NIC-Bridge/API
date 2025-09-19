@@ -1,5 +1,5 @@
 import app from './app';
-import logger from './config/logger';
+import { logger } from './config/logger';
 import { db } from './config/database';
 
 const PORT = process.env['PORT'] || 3000;
